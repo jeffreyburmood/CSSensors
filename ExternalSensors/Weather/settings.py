@@ -1,4 +1,5 @@
-""" This file loads the required API keys from the local environment. """
+""" This file loads the required API keys from the local environment.
+    The code is based on the ambient API library by Amos Vryhof """
 
 import os
 

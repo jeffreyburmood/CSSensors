@@ -5,6 +5,8 @@
 
 import datetime
 import logging
+import os
+from dotenv import load_dotenv
 
 import requests
 
@@ -98,16 +100,19 @@ class AmbientAPI:
 
     def __init__(self, **kwargs):
         http_client = kwargs.get('http_client', requests)
+        load_dotenv()
 
         self.client = http_client
         self.endpoint = getattr(settings, 'AMBIENT_ENDPOINT', kwargs.get('AMBIENT_ENDPOINT', None))
-        self.api_key = getattr(settings, 'AMBIENT_API_KEY', kwargs.get('AMBIENT_API_KEY', None))
-        self.application_key = getattr(settings, 'AMBIENT_APPLICATION_KEY', kwargs.get('AMBIENT_APPLICATION_KEY', None))
+        self.api_key = os.getenv("AMBIENT_API_KEY") # getattr(settings, 'AMBIENT_API_KEY', kwargs.get('AMBIENT_API_KEY', None))
+        self.application_key = os.getenv("AMBIENT_APPLICATION_KEY") # getattr(settings, 'AMBIENT_APPLICATION_KEY', kwargs.get('AMBIENT_APPLICATION_KEY', None))
 
-        default_log_level = getattr(settings, 'AMBIENT_LOG_LEVEL', None)
-        self.log_level = kwargs.get('log_level', default_log_level)
-        default_log_file = getattr(settings, 'AMBIENT_LOG_FILE', None)
-        self.log_file = kwargs.get('log_file', default_log_file)
+        # default_log_level = getattr(settings, 'AMBIENT_LOG_LEVEL', None)
+        # self.log_level = kwargs.get('log_level', default_log_level)
+        self.log_level = "INFO"
+        # default_log_file = getattr(settings, 'AMBIENT_LOG_FILE', None)
+        # self.log_file = kwargs.get('log_file', default_log_file)
+        self.log_file = "weatherlog.log"
 
     def log(self, message):
         if self.log_level:
