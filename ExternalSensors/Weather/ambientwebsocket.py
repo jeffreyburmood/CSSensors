@@ -10,30 +10,23 @@ sio = socketio.AsyncClient()
 @sio.event
 async def connect():
     try:
-        load_dotenv()
-        application_key = os.getenv("AMBIENT_APPLICATION_KEY")
-        api_key = os.getenv("AMBIENT_API_KEY")
-        print(f'Application key = ' + application_key)
-        # await sio.connect('https://rt2.ambientweather.net/?api=1&applicationKey='+application_key)
-        await sio.connect('https://rt2.ambientweather.net/v1/?applicationKey='+application_key)
         if sio.connected:
             print("Connected to server")
+            print(f'Connection ID = {sio.sid}')
+            print(f'Connection transport type = {sio.transport()}')
             # build the subscribe data
+            api_key = os.getenv("AMBIENT_API_KEY")
             subscribe_data = { 'apiKeys': [api_key] }
             await sio.emit('subscribe', subscribe_data)
         else:
-            print('Could not connect')
-            exit()
+            print(f'Did not connect, connected = {sio.connected}')
     except Exception as ex:
         print(f'Exception encountered trying to connect looks like {ex}')
-        await disconnect()
 
 
 @sio.event
 async def disconnect():
-    await sio.disconnect()
     print("Disconnected from server")
-    exit()
 
 @sio.on('subscribed')
 async def on_subscribed(data):
@@ -44,11 +37,15 @@ async def on_data(data):
     print(f"Received data: {data}")
 
 async def main():
-    await connect()
+    load_dotenv()
+    application_key = os.getenv("AMBIENT_APPLICATION_KEY")
     try:
+        await sio.connect('https://rt2.ambientweather.net/?api=2&applicationKey='+application_key)
         await sio.wait()
     except KeyboardInterrupt:
         pass
+    except Exception as ex:
+        print(f'Exception encountered in main loop looks like {ex}')
     finally:
         await sio.disconnect()
 
