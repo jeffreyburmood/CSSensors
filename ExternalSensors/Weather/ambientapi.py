@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 
 import requests
 
-import settings
-
 
 class AmbientWeatherStation:
     """
@@ -103,9 +101,9 @@ class AmbientAPI:
         load_dotenv()
 
         self.client = http_client
-        self.endpoint = getattr(settings, 'AMBIENT_ENDPOINT', kwargs.get('AMBIENT_ENDPOINT', None))
-        self.api_key = os.getenv("AMBIENT_API_KEY") # getattr(settings, 'AMBIENT_API_KEY', kwargs.get('AMBIENT_API_KEY', None))
-        self.application_key = os.getenv("AMBIENT_APPLICATION_KEY") # getattr(settings, 'AMBIENT_APPLICATION_KEY', kwargs.get('AMBIENT_APPLICATION_KEY', None))
+        self.endpoint = os.getenv("AMBIENT_ENDPOINT")
+        self.api_key = os.getenv("AMBIENT_API_KEY")
+        self.application_key = os.getenv("AMBIENT_APPLICATION_KEY")
 
         # default_log_level = getattr(settings, 'AMBIENT_LOG_LEVEL', None)
         # self.log_level = kwargs.get('log_level', default_log_level)
