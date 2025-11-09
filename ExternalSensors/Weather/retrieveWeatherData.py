@@ -1,17 +1,15 @@
-""" This file contains code to utilize the aioamobient library.
+""" This file contains code to register with the AWN websocket to receive weather data updates from the
+    cabin weather station. The code utilizes the asyncio-based aioamobient library.
     https://github.com/bachya/aioambient/tree/dev """
 
 import asyncio
 import os
-
-from aiohttp import ClientSession
 
 from aioambient import Websocket
 
 from dotenv import load_dotenv
 
 async def main() -> None:
-    """Create the aiohttp session and run the example."""
     load_dotenv()
     API_KEY = os.getenv('AMBIENT_API_KEY')
     APP_KEY = os.getenv('AMBIENT_APPLICATION_KEY')
