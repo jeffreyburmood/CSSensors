@@ -5,6 +5,9 @@
 import asyncio
 import os
 
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
 from aioambient import Websocket
 
 from dotenv import load_dotenv
@@ -13,8 +16,36 @@ async def main() -> None:
     load_dotenv()
     API_KEY = os.getenv('AMBIENT_API_KEY')
     APP_KEY = os.getenv('AMBIENT_APPLICATION_KEY')
+    mac_addr = os.getenv('CABIN_MAC')
 
     websocket = Websocket(APP_KEY, API_KEY)
+
+    def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
+        """
+        Converts a python datetime string in UTC to the target IANA time zone.
+        :param utc_date: str, e.g. "2025-11-12 14:06:00+00:00"
+        :param tz: IANA time zone string, e.g. "America/New_York"
+        :return: String of converted datetime in same format
+        """
+        # Parse the datetime string as UTC and convert to a datetime object
+        dt = datetime.strptime(utc_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+        # convert datetime object to target timezone
+        dt_target = dt.astimezone(ZoneInfo(tz))
+
+        return dt_target.strftime("%Y-%m-%d %H:%M:%S")
+
+    def process_weather_data(current_data):
+        """
+        Takes the current real time weather data and extracts the relevant data and stores it in the database
+        :param current_data: Dictionary of retrieved weather station data
+        """
+        if current_data['macAddress'] == mac_addr:
+            local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
+
+        else:
+            pass
+
+
 
     # Note that you can watch multiple API keys at once:
     # websocket = Websocket("YOUR APPLICATION KEY", ["<API KEY 1>", "<API KEY 2>"])
@@ -63,6 +94,7 @@ async def main() -> None:
         """Wait for 3 seconds, then print the data received."""
         await asyncio.sleep(3)
         print(f"Data received async: {data}")
+        process_weather_data(data)
 
     websocket.async_on_data(data_coroutine)
 
