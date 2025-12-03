@@ -1,7 +1,12 @@
 import asyncio
-import websockets
+import os
+
 import json
+
+from aioambient import Websocket
+from weatherWebsocketResource import AsyncManagedWebsocketResource
 from aiokafka import AIOKafkaConsumer
+from dotenv import load_dotenv
 
 KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
 KAFKA_COMMAND_TOPIC = 'command-events'
@@ -11,7 +16,7 @@ async def process_websocket(start_event, termination_event):
     while not termination_event.is_set():
         await start_event.wait()
         try:
-            async with websockets.connect(WEBSOCKET_SERVER_URL) as websocket:
+            async with AsyncManagedWebsocketResource('weather') as websocket:
                 while not termination_event.is_set():
                     try:
                         message = await asyncio.wait_for(websocket.recv(), timeout=65)
@@ -64,7 +69,7 @@ async def handle_command(command, start_event, termination_event):
         return True
     return False
 
-async def main():
+async def main() -> None:
     start_event = asyncio.Event()
     termination_event = asyncio.Event()
     await asyncio.gather(

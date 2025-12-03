@@ -41,7 +41,7 @@ async def main() -> None:
         """
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-
+            print(f'local date time = {local_datetime}')
         else:
             pass
 
@@ -56,7 +56,7 @@ async def main() -> None:
         """Print a simple "hello" message."""
         print("Client has connected to the websocket")
 
-    websocket.on_connect(connect_method)
+    # websocket.on_connect(connect_method)
 
     # Alternatively, define a coroutine handler:
     async def connect_coroutine():
@@ -64,7 +64,7 @@ async def main() -> None:
         await asyncio.sleep(3)
         print("Client has connected to the websocket async")
 
-    # websocket.async_on_connect(connect_coroutine)
+    websocket.async_on_connect(connect_coroutine)
 
     # Define a method that should be run upon subscribing to the Ambient
     # Weather cloud:
@@ -104,7 +104,7 @@ async def main() -> None:
         """Print a simple "goodbye" message."""
         print("Client has disconnected from the websocket")
 
-    websocket.on_disconnect(disconnect_method)
+    # websocket.on_disconnect(disconnect_method)
 
     # Alternatively, define a coroutine handler:
     async def disconnect_coroutine(data):
@@ -112,7 +112,7 @@ async def main() -> None:
         await asyncio.sleep(3)
         print("Client has disconnected from the websocket async")
 
-    # websocket.async_on_disconnect(disconnect_coroutine)
+    websocket.async_on_disconnect(disconnect_coroutine)
 
     # Connect to the websocket:
     await websocket.connect()
