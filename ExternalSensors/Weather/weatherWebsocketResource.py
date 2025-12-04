@@ -1,6 +1,7 @@
 """ This file contains the class and associated methods for managing the weather data websocket in a Context Manager """
 import asyncio
 import os
+from typing import Any
 
 from aioambient import Websocket
 from dotenv import load_dotenv
@@ -22,7 +23,6 @@ async def data_coroutine(data):
     """Wait for 3 seconds, then print the data received."""
     await asyncio.sleep(3)
     print(f"Data received async: {data}")
-    process_weather_data(data)
 
 # Define a method that should be run when the websocket client
 # disconnects:

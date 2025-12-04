@@ -19,24 +19,16 @@ async def process_websocket(start_event, termination_event):
             async with AsyncManagedWebsocketResource('weather') as websocket:
                 while not termination_event.is_set():
                     try:
-                        message = await asyncio.wait_for(websocket.recv(), timeout=65)
-                        data = json.loads(message)
-                        await handle_websocket_data(data)
-                    except asyncio.TimeoutError:
-                        print('No data received from WebSocket in the last minute.')
-                    except websockets.ConnectionClosed:
-                        print('WebSocket connection closed, reconnecting...')
+                        pass  # handling the data events via the websocket performed in the resource object
+                    except Exception as e:
+                        print(f'***** An exception occurred during websocket operation, looks like {e}')
                         break
         except Exception as e:
             if termination_event.is_set():
                 break
-            print(f"WebSocket error: {e}, retrying in 5 seconds...")
-            await asyncio.sleep(5)
+            print(f"WebSocket error: {e}")
+            await asyncio.sleep(2)
         await asyncio.sleep(1)
-
-async def handle_websocket_data(data):
-    print(f"Received WebSocket update: {data}")
-    # Implement your data processing logic here
 
 async def process_kafka(start_event, termination_event):
     consumer = AIOKafkaConsumer(
