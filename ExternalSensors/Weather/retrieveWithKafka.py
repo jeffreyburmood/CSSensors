@@ -9,7 +9,8 @@ from aiokafka import AIOKafkaConsumer
 from dotenv import load_dotenv
 
 KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
-KAFKA_COMMAND_TOPIC = 'command-events'
+KAFKA_COMMAND_TOPIC = 'weather-command'
+KAFKA_GROUP_ID = 'weather-group'
 WEBSOCKET_SERVER_URL = 'ws://localhost:8765'
 
 async def process_websocket(start_event, termination_event):
@@ -34,8 +35,9 @@ async def process_kafka(start_event, termination_event):
     consumer = AIOKafkaConsumer(
         KAFKA_COMMAND_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id="my-command-consumers",
+        group_id="KAFKA_GROUP_ID",
         enable_auto_commit=True,
+        auto_offset_reset='latest',
         value_deserializer=lambda v: json.loads(v.decode('utf-8'))
     )
     await consumer.start()
