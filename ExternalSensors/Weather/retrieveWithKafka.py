@@ -1,17 +1,13 @@
 import asyncio
-import os
-
 import json
 
-from aioambient import Websocket
-from weatherWebsocketResource import AsyncManagedWebsocketResource
 from aiokafka import AIOKafkaConsumer
-from dotenv import load_dotenv
+
+from weatherWebsocketResource import AsyncManagedWebsocketResource
 
 KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
 KAFKA_COMMAND_TOPIC = 'weather-command'
 KAFKA_GROUP_ID = 'weather-group'
-WEBSOCKET_SERVER_URL = 'ws://localhost:8765'
 
 async def process_websocket(start_event, termination_event):
     while not termination_event.is_set():
@@ -20,7 +16,7 @@ async def process_websocket(start_event, termination_event):
             async with AsyncManagedWebsocketResource('weather') as websocket:
                 while not termination_event.is_set():
                     try:
-                        pass  # handling the data events via the websocket performed in the resource object
+                        await asyncio.sleep(2) # handling the data events via the websocket performed in the resource object
                     except Exception as e:
                         print(f'***** An exception occurred during websocket operation, looks like {e}')
                         break
@@ -38,26 +34,32 @@ async def process_kafka(start_event, termination_event):
         group_id="KAFKA_GROUP_ID",
         enable_auto_commit=True,
         auto_offset_reset='latest',
-        value_deserializer=lambda v: json.loads(v.decode('utf-8'))
+        value_deserializer=lambda v: v.decode('utf-8')
     )
     await consumer.start()
     try:
         async for msg in consumer:
+            print(
+                "{}:{:d}:{:d}: key={} value={} timestamp_ms={}".format(
+                    msg.topic, msg.partition, msg.offset, msg.key, msg.value,
+                    msg.timestamp))
             command = msg.value
+            print(f'Command received by consumer = {command}')
             should_terminate = await handle_command(command, start_event, termination_event)
             if should_terminate:
                 break
     finally:
         await consumer.stop()
+        exit(1)
 
 async def handle_command(command, start_event, termination_event):
     print(f"Received command: {command}")
-    action = command.get("action")
-    if action == "start":
+    # action = command.get("action")
+    if command == "start":
         if not start_event.is_set():
             print("Start command received. Starting WebSocket processing.")
             start_event.set()
-    elif action == "terminate":
+    elif command == "terminate":
         print("Terminate command received. Shutting down application.")
         termination_event.set()
         return True
