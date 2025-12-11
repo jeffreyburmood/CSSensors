@@ -72,14 +72,22 @@ async def handle_command(command, start_event, stop_event, termination_event):
         return True
     return False
 
-async def main() -> None:
-    start_event = asyncio.Event()
-    stop_event = asyncio.Event()
-    termination_event = asyncio.Event()
-    await asyncio.gather(
-        process_websocket(start_event, stop_event, termination_event),
-        process_kafka(start_event, stop_event, termination_event)
-    )
+    # await asyncio.gather(
+    #    process_websocket(start_event, stop_event, termination_event),
+    #    process_kafka(start_event, stop_event, termination_event)
 
+async def main() -> None:
+    try:
+        start_event = asyncio.Event()
+        stop_event = asyncio.Event()
+        termination_event = asyncio.Event()
+        async with asyncio.TaskGroup() as tg:
+            websocket_task = tg.create_task(process_websocket(start_event, stop_event, termination_event))
+            kafka_task = tg.create_task(process_kafka(start_event, stop_event, termination_event))
+
+    except asyncio.CancelledError as ex:
+        print('All tasks have been cancelled')
+        raise ex
+    
 if __name__ == "__main__":
     asyncio.run(main())
