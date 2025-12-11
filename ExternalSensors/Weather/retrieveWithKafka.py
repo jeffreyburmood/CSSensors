@@ -10,21 +10,13 @@ KAFKA_COMMAND_TOPIC = 'weather-command'
 KAFKA_GROUP_ID = 'weather-group'
 
 async def process_websocket(start_event, stop_event, termination_event):
-    while not termination_event.is_set():
-        await start_event.wait()
-        try:
+    try:
+        while not termination_event.is_set():
+            await start_event.wait()
             async with AsyncManagedWebsocketResource('weather') as websocket:
                 while not termination_event.is_set() and not stop_event.is_set():
-                    try:
-                        await asyncio.sleep(2) # handling the data events via the websocket performed in the resource object
-                    except Exception as e:
-                        print(f'***** An exception occurred during websocket operation, looks like {e}')
-                        break
-        except Exception as e:
-            if termination_event.is_set():
-                break
-            print(f"WebSocket error: {e}")
-            await asyncio.sleep(2)
+                    await asyncio.sleep(2) # handling the data events via the websocket performed in the resource object
+    finally:
         await asyncio.sleep(1)
 
 async def process_kafka(start_event, stop_event, termination_event):
@@ -47,9 +39,10 @@ async def process_kafka(start_event, stop_event, termination_event):
                     msg.timestamp))
                 command = msg.value
                 print(f'Command received by consumer = {command}')
-                should_terminate = await handle_command(command, start_event, stop_event, termination_event)
-                if should_terminate:
+                await handle_command(command, start_event, stop_event, termination_event)
+                if termination_event.is_set():
                     break
+
     finally:
         await consumer.stop()
 
@@ -71,12 +64,20 @@ async def handle_command(command, start_event, stop_event, termination_event):
         stop_event.set()
         await asyncio.sleep(1)
         termination_event.set()
-        return True
-    return False
+    else:
+        print("Unknown command event received, and ignored")
+
 
     # await asyncio.gather(
     #    process_websocket(start_event, stop_event, termination_event),
     #    process_kafka(start_event, stop_event, termination_event)
+
+class TerminateTaskGroup(Exception):
+    """ An exception created and raised to terminate a task group """
+
+async def force_terminate_task_group():
+    """ A method used to terminate a task group """
+    raise TerminateTaskGroup()
 
 async def main() -> None:
     try:
@@ -84,8 +85,13 @@ async def main() -> None:
         stop_event = asyncio.Event()
         termination_event = asyncio.Event()
         async with asyncio.TaskGroup() as tg:
-            websocket_task = tg.create_task(process_websocket(start_event, stop_event, termination_event))
-            kafka_task = tg.create_task(process_kafka(start_event, stop_event, termination_event))
+            tg.create_task(process_websocket(start_event, stop_event, termination_event))
+            tg.create_task(process_kafka(start_event, stop_event, termination_event))
+            await termination_event.wait()
+            tg.create_task(force_terminate_task_group())
+
+    except* TerminateTaskGroup:
+        pass
 
     except* asyncio.CancelledError as eg:
         # Handle task cancellations (e.g., from termination_event or external cancel)
