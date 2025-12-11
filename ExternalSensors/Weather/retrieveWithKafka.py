@@ -68,6 +68,8 @@ async def handle_command(command, start_event, stop_event, termination_event):
             start_event.clear()
     elif command == "terminate":
         print("Terminate command received. Shutting down application.")
+        stop_event.set()
+        await asyncio.sleep(1)
         termination_event.set()
         return True
     return False
@@ -85,9 +87,29 @@ async def main() -> None:
             websocket_task = tg.create_task(process_websocket(start_event, stop_event, termination_event))
             kafka_task = tg.create_task(process_kafka(start_event, stop_event, termination_event))
 
-    except asyncio.CancelledError as ex:
-        print('All tasks have been cancelled')
-        raise ex
-    
+    except* asyncio.CancelledError as eg:
+        # Handle task cancellations (e.g., from termination_event or external cancel)
+        print("Tasks were cancelled:")
+        for exc in eg.exceptions:
+            print(f"  CancelledError: {exc}")
+        raise
+
+    except* Exception as eg:
+        # Handle other exceptions raised by any task in the TaskGroup
+        print("One or more tasks raised an exception:")
+        for exc in eg.exceptions:
+            print(f"  Exception: {repr(exc)}")
+        # Optional: re-raise or perform other cleanup/logic here
+        raise
+
+    finally:
+        # Ensure that the termination event is set to signal shutdown
+        if not termination_event.is_set():
+            termination_event.set()
+        print("Application shutdown complete.")
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt, shutting down.")
