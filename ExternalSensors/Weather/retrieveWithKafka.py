@@ -1,7 +1,7 @@
 import asyncio
 import json
 
-from aiokafka import AIOKafkaConsumer
+from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from weatherWebsocketResource import AsyncManagedWebsocketResource
 
@@ -23,12 +23,20 @@ async def process_kafka(start_event, stop_event, termination_event):
     consumer = AIOKafkaConsumer(
         KAFKA_COMMAND_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id="KAFKA_GROUP_ID",
+        group_id="weather",
         enable_auto_commit=True,
         auto_offset_reset='latest',
         value_deserializer=lambda v: v.decode('utf-8')
     )
     await consumer.start()
+
+    producer = AIOKafkaProducer(
+        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+        enable_idempotence=True,
+        value_serializer=lambda v: v.encode('utf-8')
+    )
+    await producer.start()
+
     try:
         while not termination_event.is_set():
 
@@ -45,6 +53,7 @@ async def process_kafka(start_event, stop_event, termination_event):
 
     finally:
         await consumer.stop()
+        await producer.stop()
 
 async def handle_command(command, start_event, stop_event, termination_event):
     print(f"Received command: {command}")
