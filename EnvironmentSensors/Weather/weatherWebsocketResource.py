@@ -4,6 +4,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
+from SensorDataMgmt.environmentDataModel import WeatherData
 
 from aioambient import Websocket
 from dotenv import load_dotenv
@@ -32,6 +33,19 @@ def process_weather_data(current_data):
     if current_data['macAddress'] == mac_addr:
         local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
         print(f'local date time = {local_datetime}')
+
+        # grab the weather data from the websocket response
+        data = {
+            'weatherdate': datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S'),
+            'tempf': current_data['tempf'],
+            'humidity': current_data['humidity'],
+            'windspeed': current_data['windspeedmph'],
+            'solarad': current_data['solarradiation'],
+            'rainfallhrly': current_data['hourlyrainin'],
+        }
+        weatherData = WeatherData(**data)
+        print(f'WeatherData object = ', weatherData.model_dump())
+
     else:
         pass
 

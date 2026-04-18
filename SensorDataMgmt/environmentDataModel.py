@@ -2,10 +2,10 @@
 
 from pydantic import BaseModel, Field
 from typing import Any, Annotated, Optional
-from datetime import date
+from datetime import datetime
 
 class WeatherData(BaseModel):
-    weatherdate: date
+    weatherdate: datetime
     tempf: float
     humidity: float
     windspeed: float
