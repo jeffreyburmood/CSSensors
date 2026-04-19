@@ -47,7 +47,7 @@ def process_weather_data(current_data):
 
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            print(f'local date time = {local_datetime}')
+            logger.debug(f'local date time = {local_datetime}')
 
             # grab the weather data from the websocket response
             data = {
@@ -59,7 +59,7 @@ def process_weather_data(current_data):
                 'rainfallhrly': current_data['hourlyrainin'],
             }
             weatherData = WeatherData(**data)
-            print(f'WeatherData object = ', weatherData.model_dump())
+            logger.debug(f'WeatherData object = ', weatherData.model_dump())
 
         else:
             pass
@@ -175,7 +175,7 @@ class AsyncManagedWebsocketResource:
             self.resource = await self._acquire()
             logger.debug(f"[{self.name}] __aenter__ -> acquired: {self.resource}")
             return self.resource
-        
+
         except Exception as e:
             logger.error(f"[{self.name}] __aenter__ failed: {e}")
             # Re-raise so callers know acquisition failed and the with-block never runs
