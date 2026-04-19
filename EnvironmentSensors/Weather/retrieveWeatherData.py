@@ -25,6 +25,7 @@ async def process_websocket(start_event, stop_event, termination_event):
 async def process_kafka(start_event, stop_event, termination_event):
     try:
         logger = Logger.get_logger()
+        method_name = process_kafka.__name__
 
         consumer = AIOKafkaConsumer(
             KAFKA_COMMAND_TOPIC,
@@ -37,11 +38,11 @@ async def process_kafka(start_event, stop_event, termination_event):
         await consumer.start()
 
     except KafkaError as e:
-        logger.error(f'Kafka error occurred when setting up Consumer, looks like: {e}')
+        logger.error(f'Kafka error occurred when setting up Consumer in {method_name}, looks like: {e}')
         raise
 
     except Exception as ex:
-        logger.error(f'Exception encountered in process_kafka() while setting up the Consumer, looks like {ex}')
+        logger.error(f'Exception encountered in {method_name} while setting up the Consumer, looks like {ex}')
         raise
 
     try:
@@ -53,11 +54,11 @@ async def process_kafka(start_event, stop_event, termination_event):
         await producer.start()
 
     except KafkaError as e:
-        logger.error(f'Kafka error occurred when setting up Producer, looks like: {e}')
+        logger.error(f'Kafka error occurred when setting up Producer in {method_name}, looks like: {e}')
         raise
 
     except Exception as ex:
-        logger.error(f'Exception encountered in process_kafka()while setting up the Producer, looks like {ex}')
+        logger.error(f'Exception encountered in {method_name} while setting up the Producer, looks like {ex}')
         raise
 
     try:
@@ -75,7 +76,7 @@ async def process_kafka(start_event, stop_event, termination_event):
                     break
 
     except Exception as ex:
-        logger.error(f'Exception encountered in process_kafka() while looping, looks like {ex}')
+        logger.error(f'Exception encountered in {method_name} while looping, looks like {ex}')
         raise
 
     finally:
@@ -85,6 +86,7 @@ async def process_kafka(start_event, stop_event, termination_event):
 async def handle_command(command, start_event, stop_event, termination_event):
     try:
         logger = Logger.get_logger()
+        method_name = handle_command.__name__
 
         logger.info(f"Received command: {command}")
         # action = command.get("action")
@@ -107,7 +109,7 @@ async def handle_command(command, start_event, stop_event, termination_event):
             logger.info("Unknown command event received, and ignored")
 
     except Exception as ex:
-        logger.error(f'Exception encountered in handle_command() while processing Kafka commands, looks like {ex}')
+        logger.error(f'Exception encountered in {method_name} while processing Kafka commands, looks like {ex}')
         raise
 
 
@@ -123,9 +125,10 @@ async def force_terminate_task_group():
     raise TerminateTaskGroup()
 
 async def main() -> None:
-    logger = Logger.get_logger()
-
     try:
+        logger = Logger.get_logger()
+        method_name = main.__name__
+
         start_event = asyncio.Event()
         stop_event = asyncio.Event()
         termination_event = asyncio.Event()
@@ -140,14 +143,14 @@ async def main() -> None:
 
     except* asyncio.CancelledError as eg:
         # Handle task cancellations (e.g., from termination_event or external cancel)
-        logger.error(f'Tasks were cancelled, looks like: ')
+        logger.error(f'Tasks were cancelled in {method_name}, looks like: ')
         for exc in eg.exceptions:
             logger.error(f"  CancelledError: {exc}")
         raise
 
     except* Exception as eg:
         # Handle other exceptions raised by any task in the TaskGroup
-        logger.error(f"One or more tasks raised an exception, looks like: ")
+        logger.error(f"One or more tasks raised an exception in {method_name}, looks like: ")
         for exc in eg.exceptions:
             logger.error(f"  Exception: {repr(exc)}")
         # Optional: re-raise or perform other cleanup/logic here

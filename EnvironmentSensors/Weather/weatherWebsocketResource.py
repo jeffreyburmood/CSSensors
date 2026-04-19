@@ -8,6 +8,7 @@ from SensorDataMgmt.environmentDataModel import WeatherData
 
 from aioambient import Websocket
 from dotenv import load_dotenv
+from utilities.logger import Logger
 
 def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     """
@@ -16,12 +17,20 @@ def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     :param tz: IANA time zone string, e.g. "America/New_York"
     :return: String of converted datetime in same format
     """
-    # Parse the datetime string as UTC and convert to a datetime object
-    dt = datetime.strptime(utc_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
-    # convert datetime object to target timezone
-    dt_target = dt.astimezone(ZoneInfo(tz))
+    try:
+        logger = Logger.get_logger()
 
-    return dt_target.strftime("%Y-%m-%d %H:%M:%S")
+        # Parse the datetime string as UTC and convert to a datetime object
+        dt = datetime.strptime(utc_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+        # convert datetime object to target timezone
+        dt_target = dt.astimezone(ZoneInfo(tz))
+
+        return dt_target.strftime("%Y-%m-%d %H:%M:%S")
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in process_kafka() while setting up the Consumer, looks like {ex}')
+        raise
+
 
 def process_weather_data(current_data):
     """
