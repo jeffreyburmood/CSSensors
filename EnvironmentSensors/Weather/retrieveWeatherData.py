@@ -1,6 +1,9 @@
 import asyncio
 import json
 
+from aiokafka.errors import KafkaError
+
+from utilities.logger import Logger
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from weatherWebsocketResource import AsyncManagedWebsocketResource
@@ -20,61 +23,92 @@ async def process_websocket(start_event, stop_event, termination_event):
         await asyncio.sleep(1)
 
 async def process_kafka(start_event, stop_event, termination_event):
-    consumer = AIOKafkaConsumer(
-        KAFKA_COMMAND_TOPIC,
-        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        group_id="weather",
-        enable_auto_commit=True,
-        auto_offset_reset='latest',
-        value_deserializer=lambda v: v.decode('utf-8')
-    )
-    await consumer.start()
+    try:
+        logger = Logger.get_logger()
 
-    producer = AIOKafkaProducer(
-        bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
-        enable_idempotence=True,
-        value_serializer=lambda v: v.encode('utf-8')
-    )
-    await producer.start()
+        consumer = AIOKafkaConsumer(
+            KAFKA_COMMAND_TOPIC,
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+            group_id="weather",
+            enable_auto_commit=True,
+            auto_offset_reset='latest',
+            value_deserializer=lambda v: v.decode('utf-8')
+        )
+        await consumer.start()
+
+    except KafkaError as e:
+        logger.error(f'Kafka error occurred when setting up Consumer, looks like: {e}')
+        raise
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in process_kafka() while setting up the Consumer, looks like {ex}')
+        raise
+
+    try:
+        producer = AIOKafkaProducer(
+            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+            enable_idempotence=True,
+            value_serializer=lambda v: v.encode('utf-8')
+        )
+        await producer.start()
+
+    except KafkaError as e:
+        logger.error(f'Kafka error occurred when setting up Producer, looks like: {e}')
+        raise
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in process_kafka()while setting up the Producer, looks like {ex}')
+        raise
 
     try:
         while not termination_event.is_set():
 
             async for msg in consumer:
-                print(
+                logger.info(
                     "{}:{:d}:{:d}: key={} value={} timestamp_ms={}".format(
                     msg.topic, msg.partition, msg.offset, msg.key, msg.value,
                     msg.timestamp))
                 command = msg.value
-                print(f'Command received by consumer = {command}')
+                logger.info(f'Command received by consumer = {command}')
                 await handle_command(command, start_event, stop_event, termination_event)
                 if termination_event.is_set():
                     break
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in process_kafka() while looping, looks like {ex}')
+        raise
 
     finally:
         await consumer.stop()
         await producer.stop()
 
 async def handle_command(command, start_event, stop_event, termination_event):
-    print(f"Received command: {command}")
-    # action = command.get("action")
-    if command == "start":
-        if not start_event.is_set():
-            print("Start command received. Starting WebSocket processing.")
-            start_event.set()
-            stop_event.clear()
-    elif command == "stop":
-        if not stop_event.is_set():
-            print("Stop command event received, shutting down websocket connection")
+    try:
+        logger = Logger.get_logger()
+
+        logger.info(f"Received command: {command}")
+        # action = command.get("action")
+        if command == "start":
+            if not start_event.is_set():
+                logger.info("Start command received. Starting WebSocket processing.")
+                start_event.set()
+                stop_event.clear()
+        elif command == "stop":
+            if not stop_event.is_set():
+                logger.info("Stop command event received, shutting down websocket connection")
+                stop_event.set()
+                start_event.clear()
+        elif command == "terminate":
+            logger.info("Terminate command received. Shutting down application.")
             stop_event.set()
-            start_event.clear()
-    elif command == "terminate":
-        print("Terminate command received. Shutting down application.")
-        stop_event.set()
-        await asyncio.sleep(1)
-        termination_event.set()
-    else:
-        print("Unknown command event received, and ignored")
+            await asyncio.sleep(1)
+            termination_event.set()
+        else:
+            logger.info("Unknown command event received, and ignored")
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in handle_command() while processing Kafka commands, looks like {ex}')
+        raise
 
 
     # await asyncio.gather(
@@ -89,6 +123,8 @@ async def force_terminate_task_group():
     raise TerminateTaskGroup()
 
 async def main() -> None:
+    logger = Logger.get_logger()
+
     try:
         start_event = asyncio.Event()
         stop_event = asyncio.Event()
@@ -104,16 +140,16 @@ async def main() -> None:
 
     except* asyncio.CancelledError as eg:
         # Handle task cancellations (e.g., from termination_event or external cancel)
-        print("Tasks were cancelled:")
+        logger.error(f'Tasks were cancelled, looks like: ')
         for exc in eg.exceptions:
-            print(f"  CancelledError: {exc}")
+            logger.error(f"  CancelledError: {exc}")
         raise
 
     except* Exception as eg:
         # Handle other exceptions raised by any task in the TaskGroup
-        print("One or more tasks raised an exception:")
+        logger.error(f"One or more tasks raised an exception, looks like: ")
         for exc in eg.exceptions:
-            print(f"  Exception: {repr(exc)}")
+            logger.error(f"  Exception: {repr(exc)}")
         # Optional: re-raise or perform other cleanup/logic here
         raise
 
@@ -121,10 +157,11 @@ async def main() -> None:
         # Ensure that the termination event is set to signal shutdown
         if not termination_event.is_set():
             termination_event.set()
-        print("Application shutdown complete.")
+        logger.info("Application shutdown complete.")
 
 if __name__ == "__main__":
     try:
+        logger = Logger.get_logger()
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Received KeyboardInterrupt, shutting down.")
+        logger.info("Received KeyboardInterrupt, shutting down.")
