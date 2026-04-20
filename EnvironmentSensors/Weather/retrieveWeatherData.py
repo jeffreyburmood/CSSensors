@@ -1,16 +1,14 @@
 import asyncio
 import json
+import os
 
 from aiokafka.errors import KafkaError
+from dotenv import load_dotenv
 
 from utilities.logger import Logger
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 
 from weatherWebsocketResource import AsyncManagedWebsocketResource
-
-KAFKA_BOOTSTRAP_SERVERS = 'localhost:9092'
-KAFKA_COMMAND_TOPIC = 'weather-command'
-KAFKA_GROUP_ID = 'weather-group'
 
 async def process_websocket(start_event, stop_event, termination_event):
     try:
@@ -28,8 +26,8 @@ async def process_kafka(start_event, stop_event, termination_event):
         method_name = process_kafka.__name__
 
         consumer = AIOKafkaConsumer(
-            KAFKA_COMMAND_TOPIC,
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+            os.getenv('KAFKA_COMMAND_TOPIC'),
+            bootstrap_servers=os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
             group_id="weather",
             enable_auto_commit=True,
             auto_offset_reset='latest',
@@ -47,7 +45,7 @@ async def process_kafka(start_event, stop_event, termination_event):
 
     try:
         producer = AIOKafkaProducer(
-            bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
+            bootstrap_servers=os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
             enable_idempotence=True,
             value_serializer=lambda v: v.encode('utf-8')
         )
@@ -129,6 +127,7 @@ async def main() -> None:
         logger = Logger.get_logger()
         method_name = main.__name__
 
+        load_dotenv()
         start_event = asyncio.Event()
         stop_event = asyncio.Event()
         termination_event = asyncio.Event()
