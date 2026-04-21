@@ -22,8 +22,12 @@ COPY --from=builder /root/.local /root/.local
 
 ENV PATH=/root/.local/bin:$PATH
 
-COPY . .
+# copy just the required application files and directories
+COPY ./.env .
+COPY ./EnvironmentSensors ./EnvironmentSensors
+COPY ./SensorDataMgmt ./SensorDataMgmt
+COPY ./utilities ./utilities
 
 USER nobody
 
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "main.py"]
