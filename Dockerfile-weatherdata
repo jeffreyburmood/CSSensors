@@ -24,7 +24,6 @@ ENV PATH=/root/.local/bin:$PATH
 ENV PYTHONPATH=/app
 
 # copy just the required application files and directories
-COPY ./.env .
 COPY ./EnvironmentSensors ./EnvironmentSensors/
 COPY ./SensorDataMgmt ./SensorDataMgmt/
 COPY ./utilities ./utilities/
