@@ -1,5 +1,5 @@
 # Stage 1: builder
-FROM python 3.13-slim-trixie as builder
+FROM python:3.13-slim-trixie AS builder
 
 WORKDIR /build
 
@@ -12,7 +12,7 @@ COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt
 
 # Stage 2: runtime
-FROM python 3.13-slim-trixie as runtime
+FROM python:3.13-slim-trixie AS runtime
 
 WORKDIR /app
 
@@ -21,13 +21,14 @@ RUN apt-get update && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /root/.local /root/.local
 
 ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONPATH=/app
 
 # copy just the required application files and directories
 COPY ./.env .
-COPY ./EnvironmentSensors ./EnvironmentSensors
-COPY ./SensorDataMgmt ./SensorDataMgmt
-COPY ./utilities ./utilities
+COPY ./EnvironmentSensors ./EnvironmentSensors/
+COPY ./SensorDataMgmt ./SensorDataMgmt/
+COPY ./utilities ./utilities/
 
 USER nobody
 
-CMD ["python", "-m", "main.py"]
+CMD ["python", "-m", "EnvironmentSensors.Weather.retrieveWeatherData"]

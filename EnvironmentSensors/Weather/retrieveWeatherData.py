@@ -1,12 +1,10 @@
 import asyncio
-import json
 import os
 
-from aiokafka.errors import KafkaError
 from dotenv import load_dotenv
 
 from utilities.logger import Logger
-from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
+from aiokafka import errors, AIOKafkaConsumer, AIOKafkaProducer
 
 from weatherWebsocketResource import AsyncManagedWebsocketResource
 
@@ -35,7 +33,7 @@ async def process_kafka(start_event, stop_event, termination_event):
         )
         await consumer.start()
 
-    except KafkaError as e:
+    except errors.KafkaError as e:
         logger.error(f'Kafka error occurred when setting up Consumer in {method_name}, looks like: {e}')
         raise
 
@@ -51,7 +49,7 @@ async def process_kafka(start_event, stop_event, termination_event):
         )
         await producer.start()
 
-    except KafkaError as e:
+    except errors.KafkaError as e:
         logger.error(f'Kafka error occurred when setting up Producer in {method_name}, looks like: {e}')
         raise
 
