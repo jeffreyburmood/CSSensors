@@ -27,7 +27,8 @@ ENV PYTHONPATH=/app
 COPY ./EnvironmentSensors ./EnvironmentSensors/
 COPY ./SensorDataMgmt ./SensorDataMgmt/
 COPY ./utilities ./utilities/
+COPY ./EnvironmentSensors/Weather/logs ./logs/
 
-USER nobody
+# USER nobody
 
 CMD ["python", "-m", "EnvironmentSensors.Weather.retrieveWeatherData"]

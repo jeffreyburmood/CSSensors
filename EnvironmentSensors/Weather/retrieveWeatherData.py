@@ -1,12 +1,11 @@
 import asyncio
 import os
 
-from dotenv import load_dotenv
-
 from utilities.logger import Logger
 from aiokafka import errors, AIOKafkaConsumer, AIOKafkaProducer
+from dotenv import load_dotenv
 
-from weatherWebsocketResource import AsyncManagedWebsocketResource
+from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
 
 async def process_websocket(start_event, stop_event, termination_event):
     try:

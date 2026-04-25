@@ -23,7 +23,7 @@ class Logger:
             console_handler = logging.StreamHandler()
             # console_handler.setLevel(logging.DEBUG)  # set the logging level at the handler level
 
-            file_handler = logging.FileHandler("logs/logs.log")
+            # file_handler = logging.FileHandler("logs.log")
             # file_handler.setLevel(logging.DEBUG)  # set the logging level at the handler level
 
             # create the formatter (same for both handlers in this example
@@ -31,10 +31,10 @@ class Logger:
 
             # add formatter to handlers
             console_handler.setFormatter(formatter)
-            file_handler.setFormatter(formatter)
+            # file_handler.setFormatter(formatter)
 
             # add handler to logger
             Logger._logger.addHandler(console_handler)
-            Logger._logger.addHandler(file_handler)
+            # Logger._logger.addHandler(file_handler)
 
         return Logger._logger
