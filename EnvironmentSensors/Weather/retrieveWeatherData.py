@@ -1,13 +1,18 @@
 import asyncio
 import os
+import nats
 
 from utilities.logger import Logger
-from aiokafka import errors, AIOKafkaConsumer, AIOKafkaProducer
+from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
 from dotenv import load_dotenv
 
 from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
 
-async def process_websocket(start_event, stop_event, termination_event):
+start_event = asyncio.Event()
+stop_event = asyncio.Event()
+termination_event = asyncio.Event()
+
+async def process_websocket():
     try:
         while not termination_event.is_set():
             await start_event.wait()
@@ -17,100 +22,89 @@ async def process_websocket(start_event, stop_event, termination_event):
     finally:
         await asyncio.sleep(1)
 
-async def process_kafka(start_event, stop_event, termination_event):
+async def handle_start_msg(msg):
     try:
         logger = Logger.get_logger()
-        method_name = process_kafka.__name__
+        method_name = handle_start_msg.__name__
 
-        consumer = AIOKafkaConsumer(
-            os.getenv('KAFKA_COMMAND_TOPIC'),
-            bootstrap_servers=os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
-            group_id="weather",
-            enable_auto_commit=True,
-            auto_offset_reset='latest',
-            value_deserializer=lambda v: v.decode('utf-8')
-        )
-        await consumer.start()
-
-    except errors.KafkaError as e:
-        logger.error(f'Kafka error occurred when setting up Consumer in {method_name}, looks like: {e}')
-        raise
-
-    except Exception as ex:
-        logger.error(f'Exception encountered in {method_name} while setting up the Consumer, looks like {ex}')
-        raise
-
-    try:
-        producer = AIOKafkaProducer(
-            bootstrap_servers=os.getenv('KAFKA_BOOTSTRAP_SERVERS'),
-            enable_idempotence=True,
-            value_serializer=lambda v: v.encode('utf-8')
-        )
-        await producer.start()
-
-    except errors.KafkaError as e:
-        logger.error(f'Kafka error occurred when setting up Producer in {method_name}, looks like: {e}')
-        raise
-
-    except Exception as ex:
-        logger.error(f'Exception encountered in {method_name} while setting up the Producer, looks like {ex}')
-        raise
-
-    try:
-        while not termination_event.is_set():
-
-            async for msg in consumer:
-                logger.info(
-                    "{}:{:d}:{:d}: key={} value={} timestamp_ms={}".format(
-                    msg.topic, msg.partition, msg.offset, msg.key, msg.value,
-                    msg.timestamp))
-                command = msg.value
-                logger.info(f'Command received by consumer = {command}')
-                await handle_command(command, start_event, stop_event, termination_event)
-                if termination_event.is_set():
-                    break
-
-    except Exception as ex:
-        logger.error(f'Exception encountered in {method_name} while looping, looks like {ex}')
-        raise
-
-    finally:
-        await consumer.stop()
-        await producer.stop()
-
-async def handle_command(command, start_event, stop_event, termination_event):
-    try:
-        logger = Logger.get_logger()
-        method_name = handle_command.__name__
-
-        logger.info(f"Received command: {command}")
-        # action = command.get("action")
-        if command == "start":
-            if not start_event.is_set():
-                logger.info("Start command received. Starting WebSocket processing.")
-                start_event.set()
-                stop_event.clear()
-        elif command == "stop":
-            if not stop_event.is_set():
-                logger.info("Stop command event received, shutting down websocket connection")
-                stop_event.set()
-                start_event.clear()
-        elif command == "terminate":
-            logger.info("Terminate command received. Shutting down application.")
-            stop_event.set()
+        logger.info(f"Received message on subject: {msg.subject}, Starting WebSocket processing.")
+        if not start_event.is_set():
+            start_event.set()
+            stop_event.clear()
             await asyncio.sleep(1)
-            termination_event.set()
         else:
-            logger.info("Unknown command event received, and ignored")
+            logger.info(f'Received {msg.subject} but websocket processing already started')
 
     except Exception as ex:
-        logger.error(f'Exception encountered in {method_name} while processing Kafka commands, looks like {ex}')
+        logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
         raise
 
+async def handle_stop_msg(msg):
+    try:
+        logger = Logger.get_logger()
+        method_name = handle_stop_msg.__name__
 
-    # await asyncio.gather(
-    #    process_websocket(start_event, stop_event, termination_event),
-    #    process_kafka(start_event, stop_event, termination_event)
+        logger.info(f"Received message on subject: {msg.subject}, shutting down websocket connection.")
+        if not stop_event.is_set():
+            stop_event.set() # this flag being set will cause the websocket processing task to shut down the websocket connection
+            start_event.clear()
+            await asyncio.sleep(1)
+        else:
+            logger.info(f'Received {msg.subject} but websocket processing already stopped')
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
+        raise
+
+async def handle_terminate_msg(msg):
+    try:
+        logger = Logger.get_logger()
+        method_name = handle_terminate_msg.__name__
+
+        logger.info(f"Received message on subject: {msg.subject}, Shutting down application.")
+        stop_event.set()
+        start_event.clear()
+        await asyncio.sleep(1)
+        termination_event.set()
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
+        raise
+
+async def process_messages():
+    try:
+        logger = Logger.get_logger()
+        method_name = process_messages.__name__
+
+        nc = await nats.connect("nats://localhost:4222")
+
+        # set up subscribers
+        sub_start = await nc.subscribe('cmd.esg.weather.start', cb=handle_start_msg)
+        sub_stop = await nc.subscribe('cmd.esg.weather.stop', cb=handle_stop_msg)
+        sub_terminate = await nc.subscribe('cmd.esg.weather.terminate', cb=handle_terminate_msg)
+        subscriptions = [sub_start, sub_stop, sub_terminate]
+
+        # don't do anymore in this task until a terminate message is received and the event flag is set
+        await termination_event.wait()
+
+        # once the terminate message is received, the websocket connection has already been closed so
+        # shutdown and clean up the nats client
+        logger.info("Shutting down...")
+        for sub in subscriptions:
+            await sub.unsubscribe()
+        await nc.drain()
+        await nc.close()
+        logger.info("All nats connections closed.")
+
+        # once the nats client is shutdown then cancel out of the task group to end the application
+        raise asyncio.CancelledError
+
+    except asyncio.CancelledError:
+        raise
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+
 
 class TerminateTaskGroup(Exception):
     """ An exception created and raised to terminate a task group """
@@ -124,15 +118,15 @@ async def main() -> None:
         logger = Logger.get_logger()
         method_name = main.__name__
 
-        load_dotenv()
-        start_event = asyncio.Event()
-        stop_event = asyncio.Event()
-        termination_event = asyncio.Event()
+        load_dotenv(".env.development")
+        # start_event = asyncio.Event()
+        # stop_event = asyncio.Event()
+        # termination_event = asyncio.Event()
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(process_websocket(start_event, stop_event, termination_event))
-            tg.create_task(process_kafka(start_event, stop_event, termination_event))
-            await termination_event.wait()
-            tg.create_task(force_terminate_task_group())
+            tg.create_task(process_websocket())
+            tg.create_task(process_messages())
+            # await termination_event.wait()
+            # tg.create_task(force_terminate_task_group())
 
     except* TerminateTaskGroup:
         pass
@@ -142,7 +136,7 @@ async def main() -> None:
         logger.error(f'Tasks were cancelled in {method_name}, looks like: ')
         for exc in eg.exceptions:
             logger.error(f"  CancelledError: {exc}")
-        raise
+        pass
 
     except* Exception as eg:
         # Handle other exceptions raised by any task in the TaskGroup
@@ -154,13 +148,12 @@ async def main() -> None:
 
     finally:
         # Ensure that the termination event is set to signal shutdown
-        if not termination_event.is_set():
-            termination_event.set()
         logger.info("Application shutdown complete.")
 
 if __name__ == "__main__":
     try:
         logger = Logger.get_logger()
         asyncio.run(main())
+
     except KeyboardInterrupt:
         logger.info("Received KeyboardInterrupt, shutting down.")

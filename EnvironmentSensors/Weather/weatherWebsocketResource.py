@@ -133,7 +133,7 @@ def configure_websocket() -> Websocket:
         logger = Logger.get_logger()
         method_name = configure_websocket.__name__
 
-        load_dotenv()
+        load_dotenv(".env.development")
         API_KEY = os.getenv('AMBIENT_API_KEY')
         APP_KEY = os.getenv('AMBIENT_APPLICATION_KEY')
 
