@@ -11,6 +11,7 @@ from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebs
 start_event = asyncio.Event()
 stop_event = asyncio.Event()
 termination_event = asyncio.Event()
+nats_shutdown_event = asyncio.Event()
 
 async def process_websocket():
     try:
@@ -64,8 +65,8 @@ async def handle_terminate_msg(msg):
         logger.info(f"Received message on subject: {msg.subject}, Shutting down application.")
         stop_event.set()
         start_event.clear()
+        nats_shutdown_event.set()
         await asyncio.sleep(1)
-        termination_event.set()
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
@@ -76,7 +77,10 @@ async def process_messages():
         logger = Logger.get_logger()
         method_name = process_messages.__name__
 
-        nc = await nats.connect("nats://localhost:4222")
+        load_dotenv()
+
+        nats_server_url = os.getenv('NATS_SERVER')
+        nc = await nats.connect(nats_server_url)
 
         # set up subscribers
         sub_start = await nc.subscribe('cmd.esg.weather.start', cb=handle_start_msg)
@@ -85,25 +89,28 @@ async def process_messages():
         subscriptions = [sub_start, sub_stop, sub_terminate]
 
         # don't do anymore in this task until a terminate message is received and the event flag is set
-        await termination_event.wait()
+        await nats_shutdown_event.wait()
 
         # once the terminate message is received, the websocket connection has already been closed so
         # shutdown and clean up the nats client
-        logger.info("Shutting down...")
+        logger.info("Shutting down nats client connections...")
         for sub in subscriptions:
             await sub.unsubscribe()
         await nc.drain()
         await nc.close()
         logger.info("All nats connections closed.")
 
-        # once the nats client is shutdown then cancel out of the task group to end the application
-        raise asyncio.CancelledError
+        termination_event.set()
 
-    except asyncio.CancelledError:
-        raise
+        # once the nats client is shutdown then cancel out of the task group to end the application
+        # raise asyncio.CancelledError
+
+    # except asyncio.CancelledError:
+    #     raise
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        raise
 
 
 class TerminateTaskGroup(Exception):
@@ -118,15 +125,11 @@ async def main() -> None:
         logger = Logger.get_logger()
         method_name = main.__name__
 
-        load_dotenv(".env.development")
-        # start_event = asyncio.Event()
-        # stop_event = asyncio.Event()
-        # termination_event = asyncio.Event()
         async with asyncio.TaskGroup() as tg:
             tg.create_task(process_websocket())
             tg.create_task(process_messages())
-            # await termination_event.wait()
-            # tg.create_task(force_terminate_task_group())
+            await termination_event.wait()
+            tg.create_task(force_terminate_task_group())
 
     except* TerminateTaskGroup:
         pass

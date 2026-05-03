@@ -59,7 +59,7 @@ def process_weather_data(current_data):
                 'rainfallhrly': current_data['hourlyrainin'],
             }
             weatherData = WeatherData(**data)
-            logger.info(f'WeatherData object = ', weatherData.model_dump())
+            logger.info(f'WeatherData object = {weatherData.model_dump()}')
 
         else:
             pass
@@ -133,7 +133,7 @@ def configure_websocket() -> Websocket:
         logger = Logger.get_logger()
         method_name = configure_websocket.__name__
 
-        load_dotenv(".env.development")
+        load_dotenv()
         API_KEY = os.getenv('AMBIENT_API_KEY')
         APP_KEY = os.getenv('AMBIENT_APPLICATION_KEY')
 
