@@ -28,6 +28,7 @@ COPY ./EnvironmentSensors ./EnvironmentSensors/
 COPY ./SensorDataMgmt ./SensorDataMgmt/
 COPY ./utilities ./utilities/
 COPY ./EnvironmentSensors/Weather/logs ./logs/
+COPY ./.env .env
 
 # USER nobody
 

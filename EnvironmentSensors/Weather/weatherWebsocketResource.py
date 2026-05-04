@@ -59,7 +59,7 @@ def process_weather_data(current_data):
                 'rainfallhrly': current_data['hourlyrainin'],
             }
             weatherData = WeatherData(**data)
-            logger.info(f'WeatherData object = {weatherData.model_dump()}')
+            logger.debug(f'WeatherData object = {weatherData.model_dump()}')
 
         else:
             pass
