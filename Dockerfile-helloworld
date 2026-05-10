@@ -1,0 +1,6 @@
+FROM python:3.13-slim-trixie
+
+WORKDIR /app
+COPY ./helloworld.py .
+
+CMD ["python", "-m", "helloworld"]
