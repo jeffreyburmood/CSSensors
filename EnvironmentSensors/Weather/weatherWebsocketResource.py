@@ -18,10 +18,11 @@ def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     :param tz: IANA time zone string, e.g. "America/New_York"
     :return: String of converted datetime in same format
     """
-    try:
-        logger = Logger.get_logger()
-        method_name = convert_utc_to_timezone.__name__
 
+    method_name = convert_utc_to_timezone.__name__
+    logger = Logger.get_logger()
+
+    try:
         # Parse the datetime string as UTC and convert to a datetime object
         dt = datetime.strptime(utc_date, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
         # convert datetime object to target timezone
@@ -39,10 +40,11 @@ def process_weather_data(current_data):
     Takes the current real time weather data and extracts the relevant data and stores it in the database
     :param current_data: Dictionary of retrieved weather station data
     """
-    try:
-        logger = Logger.get_logger()
-        method_name = process_weather_data.__name__
 
+    method_name = process_weather_data.__name__
+    logger = Logger.get_logger()
+
+    try:
         mac_addr = os.getenv('CABIN_MAC')
 
         if current_data['macAddress'] == mac_addr:
@@ -71,10 +73,12 @@ def process_weather_data(current_data):
 # Define a method that should be fired when the websocket client
 # connects:
 def connect_method():
-    """Print a simple "hello" message."""
+    """Print a simple "connected" message."""
+
+    logger = Logger.get_logger()
+    method_name = connect_method.__name__
+
     try:
-        logger = Logger.get_logger()
-        method_name = connect_method.__name__
 
         logger.debug(f"Client has connected to the websocket in {method_name}")
 
@@ -86,10 +90,11 @@ def connect_method():
 # Weather cloud:
 def subscribed_method(data):
     """Print the data received upon subscribing."""
-    try:
-        logger = Logger.get_logger()
-        method_name = subscribed_method.__name__
 
+    logger = Logger.get_logger()
+    method_name = subscribed_method.__name__
+
+    try:
         logger.debug(f"Subscription data received in {method_name}: {data}")
 
     except Exception as ex:
@@ -99,10 +104,11 @@ def subscribed_method(data):
 # Alternatively, define a coroutine handler:
 async def data_coroutine(data):
     """Wait for 3 seconds, then print the data received."""
-    try:
-        logger = Logger.get_logger()
-        method_name = data_coroutine.__name__
 
+    logger = Logger.get_logger()
+    method_name = data_coroutine.__name__
+
+    try:
         await asyncio.sleep(3)
         logger.debug(f"Data received async: {data}")
         process_weather_data(data)
@@ -115,10 +121,11 @@ async def data_coroutine(data):
 # disconnects:
 async def disconnect_coroutine(data):
     """Wait for 3 seconds, then print a simple "goodbye" message."""
-    try:
-        logger = Logger.get_logger()
-        method_name = disconnect_coroutine.__name__
 
+    logger = Logger.get_logger()
+    method_name = disconnect_coroutine.__name__
+
+    try:
         await asyncio.sleep(3)
         logger.debug("Client has disconnected from the websocket async")
 
@@ -129,10 +136,11 @@ async def disconnect_coroutine(data):
 
 def configure_websocket() -> Websocket:
     """ this method will perform the weather websocket set needed before attempting to connect """
-    try:
-        logger = Logger.get_logger()
-        method_name = configure_websocket.__name__
 
+    logger = Logger.get_logger()
+    method_name = configure_websocket.__name__
+
+    try:
         load_dotenv()
         API_KEY = os.getenv('AMBIENT_API_KEY')
         APP_KEY = os.getenv('AMBIENT_APPLICATION_KEY')
@@ -169,9 +177,9 @@ class AsyncManagedWebsocketResource:
         self.resource = None
 
     async def __aenter__(self):
-        try:
-            logger = Logger.get_logger()
+        logger = Logger.get_logger()
 
+        try:
             self.resource = await self._acquire()
             logger.debug(f"[{self.name}] __aenter__ -> acquired: {self.resource}")
             return self.resource
@@ -182,9 +190,9 @@ class AsyncManagedWebsocketResource:
             raise
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        try:
-            logger = Logger.get_logger()
+        logger = Logger.get_logger()
 
+        try:
             # Only try to release if resource was acquired
             if self.resource is None:
                 logger.debug(f"[{self.name}] __aexit__: nothing to release.")
@@ -199,9 +207,9 @@ class AsyncManagedWebsocketResource:
             return False
 
     async def _acquire(self) -> Websocket | None:
-        try:
-            logger = Logger.get_logger()
+        logger = Logger.get_logger()
 
+        try:
             # simulate async acquisition work
             logger.debug(f"[{self.name}] acquiring (async)...")
             websocket = configure_websocket()
@@ -215,9 +223,9 @@ class AsyncManagedWebsocketResource:
             return None
 
     async def _release(self):
-        try:
-            logger = Logger.get_logger()
+        logger = Logger.get_logger()
 
+        try:
             # simulate async release work
             logger.debug(f"[{self.name}] releasing (async)...")
             await self.resource.disconnect()
