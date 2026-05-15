@@ -25,7 +25,6 @@ async def process_websocket():
 
 async def handle_start_msg(msg):
     try:
-        logger = Logger.get_logger()
         method_name = handle_start_msg.__name__
 
         logger.info(f"Received message on subject: {msg.subject}, Starting WebSocket processing.")
@@ -42,7 +41,6 @@ async def handle_start_msg(msg):
 
 async def handle_stop_msg(msg):
     try:
-        logger = Logger.get_logger()
         method_name = handle_stop_msg.__name__
 
         logger.info(f"Received message on subject: {msg.subject}, shutting down websocket connection.")
@@ -59,7 +57,6 @@ async def handle_stop_msg(msg):
 
 async def handle_terminate_msg(msg):
     try:
-        logger = Logger.get_logger()
         method_name = handle_terminate_msg.__name__
 
         logger.info(f"Received message on subject: {msg.subject}, Shutting down application.")
@@ -74,7 +71,6 @@ async def handle_terminate_msg(msg):
 
 async def process_messages():
     try:
-        logger = Logger.get_logger()
         method_name = process_messages.__name__
 
         load_dotenv()
@@ -122,7 +118,6 @@ async def force_terminate_task_group():
 
 async def main() -> None:
     try:
-        logger = Logger.get_logger()
         method_name = main.__name__
 
         async with asyncio.TaskGroup() as tg:

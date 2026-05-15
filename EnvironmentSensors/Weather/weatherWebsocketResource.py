@@ -11,6 +11,8 @@ from aioambient import Websocket
 from dotenv import load_dotenv
 from utilities.logger import Logger
 
+logger = Logger.get_logger()
+
 def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     """
     Converts a python datetime string in UTC to the target IANA time zone.
@@ -20,7 +22,6 @@ def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     """
 
     method_name = convert_utc_to_timezone.__name__
-    logger = Logger.get_logger()
 
     try:
         # Parse the datetime string as UTC and convert to a datetime object
@@ -42,7 +43,6 @@ def process_weather_data(current_data):
     """
 
     method_name = process_weather_data.__name__
-    logger = Logger.get_logger()
 
     try:
         mac_addr = os.getenv('CABIN_MAC')
@@ -75,7 +75,6 @@ def process_weather_data(current_data):
 def connect_method():
     """Print a simple "connected" message."""
 
-    logger = Logger.get_logger()
     method_name = connect_method.__name__
 
     try:
@@ -91,7 +90,6 @@ def connect_method():
 def subscribed_method(data):
     """Print the data received upon subscribing."""
 
-    logger = Logger.get_logger()
     method_name = subscribed_method.__name__
 
     try:
@@ -105,7 +103,6 @@ def subscribed_method(data):
 async def data_coroutine(data):
     """Wait for 3 seconds, then print the data received."""
 
-    logger = Logger.get_logger()
     method_name = data_coroutine.__name__
 
     try:
@@ -122,7 +119,6 @@ async def data_coroutine(data):
 async def disconnect_coroutine(data):
     """Wait for 3 seconds, then print a simple "goodbye" message."""
 
-    logger = Logger.get_logger()
     method_name = disconnect_coroutine.__name__
 
     try:
@@ -137,7 +133,6 @@ async def disconnect_coroutine(data):
 def configure_websocket() -> Websocket:
     """ this method will perform the weather websocket set needed before attempting to connect """
 
-    logger = Logger.get_logger()
     method_name = configure_websocket.__name__
 
     try:
@@ -177,7 +172,6 @@ class AsyncManagedWebsocketResource:
         self.resource = None
 
     async def __aenter__(self):
-        logger = Logger.get_logger()
 
         try:
             self.resource = await self._acquire()
@@ -190,7 +184,6 @@ class AsyncManagedWebsocketResource:
             raise
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        logger = Logger.get_logger()
 
         try:
             # Only try to release if resource was acquired
@@ -207,7 +200,6 @@ class AsyncManagedWebsocketResource:
             return False
 
     async def _acquire(self) -> Websocket | None:
-        logger = Logger.get_logger()
 
         try:
             # simulate async acquisition work
@@ -223,7 +215,6 @@ class AsyncManagedWebsocketResource:
             return None
 
     async def _release(self):
-        logger = Logger.get_logger()
 
         try:
             # simulate async release work

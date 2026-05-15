@@ -110,7 +110,7 @@ class AmbientAPI:
         self.log_level = "INFO"
         # default_log_file = getattr(settings, 'AMBIENT_LOG_FILE', None)
         # self.log_file = kwargs.get('log_file', default_log_file)
-        self.log_file = "weatherlog.log"
+        self.log_file = "logs/logs.log"
 
     def log(self, message):
         if self.log_level:
