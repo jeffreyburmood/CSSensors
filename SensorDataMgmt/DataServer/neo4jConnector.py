@@ -17,12 +17,41 @@ class Neo4j:
         self.connection_str = connectionStr  # this is the docker network IP address for this container
         self.logger = Logger.get_logger()
 
+    def get_driver(self, driver):
+
+        method_name = self.get_driver.__name__
+
+        try:
+            self.logger.info(f'received request to {method_name}')
+            driver.verify_connectivity()
+            self.logger.info(f'graph db connection verified!')
+            return driver
+
+        except Exception as ex:
+            self.logger.error(f"exception encounter in {method_name} trying to get the neo4j driver, looks like {ex}")
+
+    def close_connection(self, driver):
+        """
+        Closes the Neo4j driver connection.
+        """
+        method_name = self.close_connection.__name__
+
+        try:
+            self.logger.info(f'received request to {method_name}')
+
+            if driver is not None:
+                driver.close()
+                self.logger.info(f'graph db connection closed!')
+
+        except Exception as ex:
+            self.logger.error(f'Exception encounter in {method_name}, looks like {ex}')
+
 class Neo4jEnv(Neo4j):
     driver = None
 
     def __init__(self):
         load_dotenv()
-        super().__init__(os.getenv('ENV_USER_NAME'), os.getenv('ENV_PASSWORD'), os.getenv('ENV_CONNECTION_STR'))
+        super().__init__(os.getenv('NEO4J_USER_NAME'), os.getenv('NEO4J_PASSWORD'), os.getenv('NEO4J_ENV_CONNECTION_STR'))
         if Neo4jEnv.driver is None:
             try:
                 Neo4j.driver = AsyncGraphDatabase.driver(self.connection_str, auth=self.auth)
@@ -30,3 +59,13 @@ class Neo4jEnv(Neo4j):
 
             except Exception as ex:
                 self.logger.error(f"exception encounter in Neo4j constructor trying to create the neo4j connection, looks like {ex}")
+
+    def get_db_driver(self):
+
+        return super().get_driver(self.driver)
+
+    def close_db_connection(self):
+        """
+        Closes the Neo4j driver connection.
+        """
+        super().close_connection(self.driver)

@@ -6,7 +6,8 @@ from typing import List
 import neo4j.exceptions
 from fastapi import FastAPI, HTTPException
 
-from data_server.connectors import Neo4j
+from SensorDataMgmt.DataServer.neo4jConnector import Neo4jEnv
+from neo4jConnector import Neo4j
 from data_server.data_model import Transaction, Currency, DBCounters, Order, Account, PlacedOrder
 from utilities.logger import Logger
 
@@ -23,7 +24,7 @@ def root() -> str:
     method_name = root.__name__
     logger.info(f'received GET request to the {method_name} route')
 
-    return "Welcome to the trading-bot Data Server!!!"
+    return "Welcome to the CSS Data Server!!!"
 
 
 @app.get("/test-connection")
@@ -33,7 +34,7 @@ def test_db_connection() -> str:
     try:
         logger.info(f'received GET request to the {method_name} route')
 
-        driver = Neo4j().get_driver()
+        driver = Neo4jEnv.driver
         if driver is not None:
             logger.info(f'Database connection has been created successfully!')
             return "Database connection has been created successfully!"
