@@ -5,6 +5,8 @@ from typing import Any, Annotated, Optional
 from datetime import datetime
 
 class WeatherData(BaseModel):
+    location: str
+    sensor: str
     weatherdate: datetime
     tempf: float
     humidity: float

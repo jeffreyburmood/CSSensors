@@ -7,8 +7,9 @@ import neo4j.exceptions
 from fastapi import FastAPI, HTTPException
 
 from SensorDataMgmt.DataServer.neo4jConnector import Neo4jEnv
+from SensorDataMgmt.neo4jDataModel import DBCounters
 from neo4jConnector import Neo4j
-from data_server.data_model import Transaction, Currency, DBCounters, Order, Account, PlacedOrder
+from SensorDataMgmt.environmentDataModel import WeatherData
 from utilities.logger import Logger
 
 app = FastAPI()
@@ -34,7 +35,7 @@ def test_db_connection() -> str:
     try:
         logger.info(f'received GET request to the {method_name} route')
 
-        driver = Neo4jEnv.driver
+        driver = Neo4jEnv().get_db_driver()
         if driver is not None:
             logger.info(f'Database connection has been created successfully!')
             return "Database connection has been created successfully!"
@@ -52,8 +53,7 @@ def close_db_connection() -> str:
     try:
         logger.info(f'received GET request to the {method_name} route')
 
-        db_connection = Neo4j()
-        db_connection.close_connection()
+        Neo4jEnv().close_db_connection()
         logger.info(f'Database connection has been closed successfully!')
         return "Database connection has been closed successfully!"
     except Exception as ex:
@@ -82,6 +82,46 @@ def clear_db() -> DBCounters:
     except Exception as ex:
         raise HTTPException(status_code=404, detail=f"Exception occurred when trying to clear the database, looks like {ex}")
 
+
+@app.post("/add-new-weather-data")
+def add_new_weather_data_to_db(new_weather_data: WeatherData) -> None:
+    """ this method will add new weather data to the neo4j database """
+
+    method_name = add_new_weather_data_to_db.__name__
+
+    try:
+        logger.info(f'received POST request to the {method_name} route')
+
+        driver = Neo4jEnv().get_db_driver()
+
+        db_counters = DBCounters()
+
+        row_summary = driver.execute_query("""
+                            CREATE (c: Currency {currencyname: $currencyname, currencyid: $currencyid})
+                        """,
+                                           currencyid=currency.currencyid,
+                                           currencyname=currency.currencyname,
+                                           database_='neo4j',
+                                           ).summary
+
+        db_counters.update_counts(row_summary.counters)
+
+        logger.info(f"There were {db_counters.nodes_created} nodes created")
+
+        return {'number_currencies_added': db_counters.nodes_created}
+
+    except neo4j.exceptions.ConstraintError as con:
+        logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")
+        return {'number_currencies_added': 0}
+
+    except Exception as ex:
+        logger.error(f"Exception encountered in {method_name} looks like {ex}")
+        raise HTTPException(status_code=404,
+                            detail=f"Error occurred when trying to POST a new currency to the db, looks like {ex}")
+
+
+
+********************************************************************************************************************
 @app.get("/currencies")
 def query_existing_currencies() -> List[Currency]:
     """ the purpose of this method endpoint is to retrieve the list of existing currencies from the DB """

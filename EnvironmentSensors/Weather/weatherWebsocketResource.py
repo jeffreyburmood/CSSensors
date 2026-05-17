@@ -5,6 +5,9 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Coroutine
 from zoneinfo import ZoneInfo
+
+from httpx import AsyncClient, HTTPStatusError
+
 from SensorDataMgmt.environmentDataModel import WeatherData
 
 from aioambient import Websocket
@@ -35,8 +38,25 @@ def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
         logger.error(f'Exception encountered in {method_name} while setting up the Consumer, looks like {ex}')
         raise
 
+async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
+    """ the coroutine makes the actual fastapi call to add the new weather data to the db"""
+    method_name = add_weather_data_to_database.__name__
 
-def process_weather_data(current_data):
+    try:
+        db_url = os.getenv('NEO4J_URL')
+
+        async with AsyncClient() as client:
+            response = await client.post(db_url+'/add-new-weather_data', json=new_weather_data.model_dump())
+            response.raise_for_status()
+            logger.info(f'request to add new weather data completed successfully!')
+
+    except HTTPStatusError as http_error:
+        logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        raise
+
+async def process_weather_data(current_data):
     """
     Takes the current real time weather data and extracts the relevant data and stores it in the database
     :param current_data: Dictionary of retrieved weather station data
@@ -53,6 +73,8 @@ def process_weather_data(current_data):
 
             # grab the weather data from the websocket response
             data = {
+                'location': 'cabin-outside',
+                'sensor': 'ambientweather',
                 'weatherdate': datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S'),
                 'tempf': current_data['tempf'],
                 'humidity': current_data['humidity'],
@@ -60,8 +82,10 @@ def process_weather_data(current_data):
                 'solarad': current_data['solarradiation'],
                 'rainfallhrly': current_data['hourlyrainin'],
             }
-            weatherData = WeatherData(**data)
-            logger.info(f'WeatherData object = {weatherData.model_dump()}')
+            weather_data = WeatherData(**data)
+            logger.info(f'Weather Data object = {weather_data.model_dump()}')
+
+            await add_weather_data_to_database(weather_data)
 
         else:
             pass
@@ -101,14 +125,13 @@ def subscribed_method(data):
 
 # Alternatively, define a coroutine handler:
 async def data_coroutine(data):
-    """Wait for 3 seconds, then print the data received."""
+    """ process the data received by adding it to the database """
 
     method_name = data_coroutine.__name__
 
     try:
-        await asyncio.sleep(3)
         logger.debug(f"Data received async: {data}")
-        process_weather_data(data)
+        await process_weather_data(data)
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
