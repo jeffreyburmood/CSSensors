@@ -54,7 +54,7 @@ class Neo4jEnv(Neo4j):
         super().__init__(os.getenv('NEO4J_USER_NAME'), os.getenv('NEO4J_PASSWORD'), os.getenv('NEO4J_ENV_CONNECTION_STR'))
         if Neo4jEnv.driver is None:
             try:
-                Neo4j.driver = AsyncGraphDatabase.driver(self.connection_str, auth=self.auth)
+                Neo4jEnv.driver = AsyncGraphDatabase.driver(self.connection_str, auth=self.auth)
                 self.logger.info(f'new environment graph database connection driver created')
 
             except Exception as ex:

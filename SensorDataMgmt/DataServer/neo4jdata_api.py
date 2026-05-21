@@ -1,5 +1,6 @@
 """ this file contains the code used to store and retrieve data from the Neo4j database """
 import csv
+import uuid
 from datetime import date
 from typing import List
 
@@ -82,15 +83,56 @@ def clear_db() -> DBCounters:
     except Exception as ex:
         raise HTTPException(status_code=404, detail=f"Exception occurred when trying to clear the database, looks like {ex}")
 
+async def get_location_name(location: str) -> str:
+
+    method_name = get_location_name.__name__
+
+    try:
+        location_name = ''
+
+        driver = Neo4jEnv().get_db_driver()
+
+        query_records = driver.execute_query("""
+                MERGE (l:Location {name: $name})
+                RETURN l
+             """,
+            name=location,
+            database_='neo4j',
+            ).records
+
+        for record in query_records:
+            location_data = record.data()['t']
+            logger.info(f'a transaction record looks like {location_data}')
+
+            if location_data is not None:
+               location_name = location_data['name']
+
+        return location_name
+
+    except Exception as ex:
+        logger.error(f'Encountered an exception, looks like {ex}')
+        raise HTTPException(status_code=404, detail=f"An exception was encountered in {method_name}, looks like {ex}")
+
 
 @app.post("/add-new-weather-data")
-def add_new_weather_data_to_db(new_weather_data: WeatherData) -> None:
+def add_new_weather_data(new_weather_data: WeatherData) -> None:
     """ this method will add new weather data to the neo4j database """
 
-    method_name = add_new_weather_data_to_db.__name__
+    method_name = add_new_weather_data.__name__
 
     try:
         logger.info(f'received POST request to the {method_name} route')
+
+        # will need the following data before adding the new weather data
+        location_name = get_location_name(new_weather_data.location)
+        sensor_id = get_sensor_id(new_weather_data.sensor)
+
+        # need to deconstruct the date / time to get the ids for year, month, day, hour
+        year = datetime. new_weather_data.weatherdate
+        year_name = get_year_id(new_weather_data.weatherdate.year)
+        month_id = get_month_id(new_weather_data.weatherdate.month)
+        day_id = get_day_id(new_weather_data.weatherdate.day)
+        hour_id = get_hour_id(new_weather_data.weatherdate.hour)
 
         driver = Neo4jEnv().get_db_driver()
 
