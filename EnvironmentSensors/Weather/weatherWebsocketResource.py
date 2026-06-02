@@ -71,6 +71,8 @@ async def process_weather_data(current_data):
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
             logger.debug(f'local date time = {local_datetime}')
 
+            # only process the weather data if it's been an hour since the last DB update
+
             # grab the weather data from the websocket response
             data = {
                 'location': 'cabin-outside',

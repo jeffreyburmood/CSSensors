@@ -17,20 +17,20 @@ class Neo4j:
         self.connection_str = connectionStr  # this is the docker network IP address for this container
         self.logger = Logger.get_logger()
 
-    def get_driver(self, driver):
+    async def get_driver(self, driver):
 
         method_name = self.get_driver.__name__
 
         try:
             self.logger.info(f'received request to {method_name}')
-            driver.verify_connectivity()
+            await driver.verify_connectivity()
             self.logger.info(f'graph db connection verified!')
             return driver
 
         except Exception as ex:
             self.logger.error(f"exception encounter in {method_name} trying to get the neo4j driver, looks like {ex}")
 
-    def close_connection(self, driver):
+    async def close_connection(self, driver):
         """
         Closes the Neo4j driver connection.
         """
@@ -60,12 +60,12 @@ class Neo4jEnv(Neo4j):
             except Exception as ex:
                 self.logger.error(f"exception encounter in Neo4j constructor trying to create the neo4j connection, looks like {ex}")
 
-    def get_db_driver(self):
+    async def get_db_driver(self):
 
-        return super().get_driver(self.driver)
+        return await super().get_driver(self.driver)
 
-    def close_db_connection(self):
+    async def close_db_connection(self):
         """
         Closes the Neo4j driver connection.
         """
-        super().close_connection(self.driver)
+        await super().close_connection(self.driver)
