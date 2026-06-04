@@ -16,7 +16,6 @@ app = FastAPI()
 
 logger = Logger.get_logger()
 
-
 # trading-bot data server routes
 # these routes are used to access data withing the neo4j database
 
@@ -28,7 +27,7 @@ def root() -> str:
     return "Welcome to the CSS Data Server!!!"
 
 
-# @app.get("/test-connection")
+@app.get("/test-connection")
 def test_db_connection() -> str:
     method_name = test_db_connection.__name__
 
@@ -46,7 +45,7 @@ def test_db_connection() -> str:
         raise HTTPException(status_code=404, detail=f"Error occurred when trying to create the database connection")
 
 
-# @app.get("/close-connection")
+@app.get("/close-connection")
 def close_db_connection() -> str:
     method_name = close_db_connection.__name__
 
@@ -59,7 +58,7 @@ def close_db_connection() -> str:
     except Exception as ex:
         raise HTTPException(status_code=404, detail=f"Exception occurred when trying to close the database connection, looks like {ex}")
 
-# @app.get("/clear-db")
+@app.get("/clear-db")
 def clear_db() -> DBCounters:
     method_name = clear_db.__name__
 
@@ -113,7 +112,7 @@ async def get_location_name(location: str) -> str:
         raise HTTPException(status_code=404, detail=f"An exception was encountered in {method_name}, looks like {ex}")
 
 
-# @app.post("/add-new-weather-data")
+@app.post("/add-new-weather-data")
 async def add_new_weather_data(new_weather_data: WeatherData) -> dict[str:int]:
     """ this method will add new weather data to the neo4j database """
 
@@ -147,9 +146,9 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> dict[str:int]:
                             MERGE (m)-[:HAS_DAY]->(d)
                             MERGE (h: Hour {hourname: $hourname})
                             MERGE (d)-[:HAS_HOUR]->(h)
-                            MERGE (r: Reading {readingid: $readingid, tempf: $tempf, humidity: $humidity, windspeed: $windspeed, solarad: $solarad, rainfallhrly: $rainfallhrly})
-                            MERGE (r)-[:RECORDED_BY]-(s)
-                            MERGE (r)-[:OCCURRED_AT]->(h)
+                            CREATE (r: Reading {readingid: $readingid, tempf: $tempf, humidity: $humidity, windspeed: $windspeed, solarad: $solarad, rainfallhrly: $rainfallhrly})
+                            CREATE (r)-[:RECORDED_BY]-(s)
+                            CREATE (r)-[:OCCURRED_AT]->(h)
                         """,
                         locationname=new_weather_data.location,
                         sensorname=new_weather_data.sensor,

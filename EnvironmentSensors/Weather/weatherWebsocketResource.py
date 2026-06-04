@@ -43,7 +43,7 @@ async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
     method_name = add_weather_data_to_database.__name__
 
     try:
-        db_url = os.getenv('NEO4J_URL')
+        db_url = os.getenv('NEO4J_DATA_API_URL')
 
         async with AsyncClient() as client:
             response = await client.post(db_url+'/add-new-weather_data', json=new_weather_data.model_dump())
