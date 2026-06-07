@@ -14,6 +14,13 @@ from aioambient import Websocket
 from dotenv import load_dotenv
 from utilities.logger import Logger
 
+import statistics
+from collections import defaultdict
+
+# persistent state for accumulating temperature data
+_weather_accumulator = defaultdict(list)
+_last_processed_hour = None
+
 logger = Logger.get_logger()
 
 def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
@@ -58,11 +65,14 @@ async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
 
 async def process_weather_data(current_data):
     """
-    Takes the current real time weather data and extracts the relevant data and stores it in the database
+    Takes the current real time weather data and extracts the relevant data and stores it in the database.
+    Accumulates temperature data and reports the median temperature once per hour.
     :param current_data: Dictionary of retrieved weather station data
     """
 
     method_name = process_weather_data.__name__
+
+    global _weather_accumulator, _last_processed_hour
 
     try:
         mac_addr = os.getenv('CABIN_MAC')
@@ -71,23 +81,53 @@ async def process_weather_data(current_data):
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
             logger.debug(f'local date time = {local_datetime}')
 
-            # only process the weather data if it's been an hour since the last DB update
+            parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
+            hour_key = (parsed_datetime.date(), parsed_datetime.hour)
 
-            # grab the weather data from the websocket response
-            data = {
-                'location': 'cabin-outside',
-                'sensor': 'ambientweather',
-                'weatherdate': datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S'),
+            # accumulate temperature readings for the current hour
+            _weather_accumulator[hour_key].append({
                 'tempf': current_data['tempf'],
                 'humidity': current_data['humidity'],
                 'windspeed': current_data['windspeedmph'],
                 'solarad': current_data['solarradiation'],
                 'rainfallhrly': current_data['hourlyrainin'],
-            }
-            weather_data = WeatherData(**data)
-            logger.info(f'Weather Data object = {weather_data.model_dump()}')
+                'weatherdate': parsed_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                'weatheryear': parsed_datetime.strftime("%Y"),
+                'weathermonth': parsed_datetime.strftime("%m"),
+                'weatherday': parsed_datetime.strftime("%d"),
+                'weatherhour': parsed_datetime.strftime("%H")
+            })
 
-            await add_weather_data_to_database(weather_data)
+            # when the hour changes, process the completed hour's accumulated data
+            if _last_processed_hour is not None and _last_processed_hour != hour_key:
+                completed_hour_readings = _weather_accumulator.pop(_last_processed_hour, [])
+
+                if completed_hour_readings:
+                    median_tempf = statistics.median(r['tempf'] for r in completed_hour_readings)
+
+                    # use the last reading of the hour for non-accumulated fields
+                    last_reading = completed_hour_readings[-1]
+
+                    data = {
+                        'location': 'cabin-outside',
+                        'sensor': 'ambientweather',
+                        'weatherdate': last_reading['weatherdate'],
+                        'weatheryear': last_reading['weatheryear'],
+                        'weathermonth': last_reading['weathermonth'],
+                        'weatherday': last_reading['weatherday'],
+                        'weatherhour': last_reading['weatherhour'],
+                        'tempf': median_tempf,
+                        'humidity': last_reading['humidity'],
+                        'windspeed': last_reading['windspeed'],
+                        'solarad': last_reading['solarad'],
+                        'rainfallhrly': last_reading['rainfallhrly'],
+                    }
+                    weather_data = WeatherData(**data)
+                    logger.info(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+
+                    await add_weather_data_to_database(weather_data)
+
+            _last_processed_hour = hour_key
 
         else:
             pass

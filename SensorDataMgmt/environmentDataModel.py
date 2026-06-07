@@ -7,7 +7,11 @@ from datetime import datetime
 class WeatherData(BaseModel):
     location: str
     sensor: str
-    weatherdate: datetime
+    weatherdate: str
+    weatheryear: str
+    weathermonth: str
+    weatherday: str
+    weatherhour: str
     tempf: float
     humidity: float
     windspeed: float

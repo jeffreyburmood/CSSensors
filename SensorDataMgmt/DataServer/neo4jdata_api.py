@@ -81,53 +81,15 @@ def clear_db() -> DBCounters:
     except Exception as ex:
         raise HTTPException(status_code=404, detail=f"Exception occurred when trying to clear the database, looks like {ex}")
 
-async def get_location_name(location: str) -> str:
-
-    method_name = get_location_name.__name__
-
-    try:
-        location_name = ''
-
-        driver = Neo4jEnv().get_db_driver()
-
-        query_records = driver.execute_query("""
-                MERGE (l:Location {name: $name})
-                RETURN l
-             """,
-            name=location,
-            database_='neo4j',
-            ).records
-
-        for record in query_records:
-            location_data = record.data()['t']
-            logger.info(f'a transaction record looks like {location_data}')
-
-            if location_data is not None:
-               location_name = location_data['name']
-
-        return location_name
-
-    except Exception as ex:
-        logger.error(f'Encountered an exception, looks like {ex}')
-        raise HTTPException(status_code=404, detail=f"An exception was encountered in {method_name}, looks like {ex}")
-
 
 @app.post("/add-new-weather-data")
-async def add_new_weather_data(new_weather_data: WeatherData) -> dict[str:int]:
+async def add_new_weather_data(new_weather_data: WeatherData) -> None:
     """ this method will add new weather data to the neo4j database """
 
     method_name = add_new_weather_data.__name__
 
     try:
         logger.info(f'received POST request to the {method_name} route')
-
-        # need to deconstruct the date / time to get the ids for year, month, day, hour
-        year_name = datetime.strftime(new_weather_data.weatherdate, '%Y')
-        month_name = datetime.strftime(new_weather_data.weatherdate, '%Y-%m')
-        day_name = datetime.strftime(new_weather_data.weatherdate, '%Y-%m-%d')
-        hour_name = datetime.strftime(new_weather_data.weatherdate, '%Y-%m-%d:%H')
-
-        reading_id = new_weather_data.weatherdate.strftime('%Y-%m-%d:%H:%M:%S')
 
         driver = await Neo4jEnv().get_db_driver()
 
@@ -147,16 +109,16 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> dict[str:int]:
                             MERGE (h: Hour {hourname: $hourname})
                             MERGE (d)-[:HAS_HOUR]->(h)
                             CREATE (r: Reading {readingid: $readingid, tempf: $tempf, humidity: $humidity, windspeed: $windspeed, solarad: $solarad, rainfallhrly: $rainfallhrly})
-                            CREATE (r)-[:RECORDED_BY]-(s)
+                            CREATE (r)-[:RECORDED_BY]->(s)
                             CREATE (r)-[:OCCURRED_AT]->(h)
                         """,
                         locationname=new_weather_data.location,
                         sensorname=new_weather_data.sensor,
-                        yearname=year_name,
-                        monthname=month_name,
-                        dayname=day_name,
-                        hourname=hour_name,
-                                                            readingid=reading_id,
+                        yearname=new_weather_data.weatheryear,
+                        monthname=new_weather_data.weathermonth,
+                        dayname=new_weather_data.weatherday,
+                        hourname=new_weather_data.weatherhour,
+                                                            readingid=new_weather_data.weatherdate,
                                                             tempf=new_weather_data.tempf,
                                                             humidity=new_weather_data.humidity,
                                                             windspeed=new_weather_data.windspeed,
@@ -168,13 +130,10 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> dict[str:int]:
         row_summary = summary
         db_counters.update_counts(row_summary.counters)
 
-        logger.info(f"There were {db_counters.nodes_created} nodes created")
-
-        return {'weather_data_added': db_counters.nodes_created}
+        logger.info(f"There were {db_counters.nodes_created} nodes created and {db_counters.relationships_created} relationships created")
 
     except neo4j.exceptions.ConstraintError as con:
         logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")
-        return {'weather_data_added': 0}
 
     except Exception as ex:
         logger.error(f"Exception encountered in {method_name} looks like {ex}")
