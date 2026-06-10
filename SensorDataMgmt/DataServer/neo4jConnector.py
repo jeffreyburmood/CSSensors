@@ -22,15 +22,15 @@ class Neo4j:
         method_name = self.get_driver.__name__
 
         try:
-            self.logger.info(f'received request to {method_name}')
+            self.logger.debug(f'received request to {method_name}')
             await driver.verify_connectivity()
-            self.logger.info(f'graph db connection verified!')
+            self.logger.debug(f'graph db connection verified!')
             return driver
 
         except Exception as ex:
             self.logger.error(f"exception encounter in {method_name} trying to get the neo4j driver, looks like {ex}")
 
-    async def close_connection(self, driver):
+    def close_connection(self, driver):
         """
         Closes the Neo4j driver connection.
         """
@@ -52,20 +52,27 @@ class Neo4jEnv(Neo4j):
     def __init__(self):
         load_dotenv()
         super().__init__(os.getenv('NEO4J_USER_NAME'), os.getenv('NEO4J_PASSWORD'), os.getenv('NEO4J_ENV_CONNECTION_STR'))
-        if Neo4jEnv.driver is None:
+        if self.driver is None:
             try:
-                Neo4jEnv.driver = AsyncGraphDatabase.driver(self.connection_str, auth=self.auth)
+                self.driver = AsyncGraphDatabase.driver(self.connection_str, auth=self.auth)
                 self.logger.info(f'new environment graph database connection driver created')
 
             except Exception as ex:
                 self.logger.error(f"exception encounter in Neo4j constructor trying to create the neo4j connection, looks like {ex}")
 
-    async def get_db_driver(self):
+    def get_db_driver(self):
 
-        return await super().get_driver(self.driver)
+        method_name = self.get_db_driver.__name__
 
-    async def close_db_connection(self):
+        try:
+            return self.driver
+
+        except Exception as ex:
+            self.logger.error(f"exception encounter in {method_name} trying to get the neo4j env driver, looks like {ex}")
+            raise
+
+    def close_db_connection(self):
         """
         Closes the Neo4j driver connection.
         """
-        await super().close_connection(self.driver)
+        super().close_connection(self.driver)

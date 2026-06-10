@@ -91,7 +91,7 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> None:
     try:
         logger.info(f'received POST request to the {method_name} route')
 
-        driver = await Neo4jEnv().get_db_driver()
+        driver = Neo4jEnv().get_db_driver()
 
         db_counters = DBCounters()
 

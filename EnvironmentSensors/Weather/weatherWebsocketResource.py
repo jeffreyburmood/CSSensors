@@ -22,6 +22,7 @@ _weather_accumulator = defaultdict(list)
 _last_processed_hour = None
 
 logger = Logger.get_logger()
+load_dotenv()
 
 def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     """
@@ -53,7 +54,7 @@ async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
         db_url = os.getenv('NEO4J_DATA_API_URL')
 
         async with AsyncClient() as client:
-            response = await client.post(db_url+'/add-new-weather_data', json=new_weather_data.model_dump())
+            response = await client.post(db_url+'/add-new-weather-data', json=new_weather_data.model_dump())
             response.raise_for_status()
             logger.info(f'request to add new weather data completed successfully!')
 
