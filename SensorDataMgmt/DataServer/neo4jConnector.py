@@ -37,11 +37,11 @@ class Neo4j:
         method_name = self.close_connection.__name__
 
         try:
-            self.logger.info(f'received request to {method_name}')
+            self.logger.debug(f'received request to {method_name}')
 
             if driver is not None:
                 driver.close()
-                self.logger.info(f'graph db connection closed!')
+                self.logger.debug(f'graph db connection closed!')
 
         except Exception as ex:
             self.logger.error(f'Exception encounter in {method_name}, looks like {ex}')
@@ -55,7 +55,7 @@ class Neo4jEnv(Neo4j):
         if self.driver is None:
             try:
                 self.driver = AsyncGraphDatabase.driver(self.connection_str, auth=self.auth)
-                self.logger.info(f'new environment graph database connection driver created')
+                self.logger.debug(f'new environment graph database connection driver created')
 
             except Exception as ex:
                 self.logger.error(f"exception encounter in Neo4j constructor trying to create the neo4j connection, looks like {ex}")

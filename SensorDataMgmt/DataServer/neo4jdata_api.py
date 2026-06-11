@@ -22,7 +22,7 @@ logger = Logger.get_logger()
 @app.get("/")
 def root() -> str:
     method_name = root.__name__
-    logger.info(f'received GET request to the {method_name} route')
+    logger.debug(f'received GET request to the {method_name} route')
 
     return "Welcome to the CSS Data Server!!!"
 
@@ -32,14 +32,14 @@ def test_db_connection() -> str:
     method_name = test_db_connection.__name__
 
     try:
-        logger.info(f'received GET request to the {method_name} route')
+        logger.debug(f'received GET request to the {method_name} route')
 
         driver = Neo4jEnv().get_db_driver()
         if driver is not None:
-            logger.info(f'Database connection has been created successfully!')
+            logger.debug(f'Database connection has been created successfully!')
             return "Database connection has been created successfully!"
         else:
-            logger.info(f'Database connection not created, no driver value returned from GET request')
+            logger.debug(f'Database connection not created, no driver value returned from GET request')
             raise HTTPException(status_code=404, detail=f"Error occurred, no driver returned!!!")
     except:
         raise HTTPException(status_code=404, detail=f"Error occurred when trying to create the database connection")
@@ -50,10 +50,10 @@ def close_db_connection() -> str:
     method_name = close_db_connection.__name__
 
     try:
-        logger.info(f'received GET request to the {method_name} route')
+        logger.debug(f'received GET request to the {method_name} route')
 
         Neo4jEnv().close_db_connection()
-        logger.info(f'Database connection has been closed successfully!')
+        logger.debug(f'Database connection has been closed successfully!')
         return "Database connection has been closed successfully!"
     except Exception as ex:
         raise HTTPException(status_code=404, detail=f"Exception occurred when trying to close the database connection, looks like {ex}")
@@ -63,7 +63,7 @@ def clear_db() -> DBCounters:
     method_name = clear_db.__name__
 
     try:
-        logger.info(f'received GET request to the {method_name} route')
+        logger.debug(f'received GET request to the {method_name} route')
 
         driver = Neo4jEnv().get_db_driver()
 
@@ -72,7 +72,7 @@ def clear_db() -> DBCounters:
         clean_summary = driver.execute_query(
             "MATCH (c) DETACH DELETE (c)",
             database_="neo4j").summary
-        logger.info(f'Database has been cleared successfully!')
+        logger.debug(f'Database has been cleared successfully!')
 
         db_counters.update_counts(clean_summary.counters)
 
@@ -89,24 +89,28 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> None:
     method_name = add_new_weather_data.__name__
 
     try:
-        logger.info(f'received POST request to the {method_name} route')
+        logger.debug(f'received POST request to the {method_name} route')
 
         driver = Neo4jEnv().get_db_driver()
 
         db_counters = DBCounters()
+
+        # extract the individual datetime values for use as noe properties
+        year, month, day = new_weather_data.weatherdate[:10].split("-")
+        hour, minute, second = new_weather_data.weatherdate[11:].split(":")
 
         # create the new weather data node  for the hour
         records, summary, keys = await driver.execute_query("""
                             MERGE (l: Location {locationname: $locationname})
                             MERGE (s: Sensor {sensorname: $sensorname})
                             MERGE (s)-[:INSTALLED_AT]->(l)
-                            MERGE (y: Year {yearname: $yearname})
+                            MERGE (y: Year {yearname: $yearname, year: $year})
                             MERGE (l)-[:HAS_YEAR]->(y)
-                            MERGE (m: Month {monthname: $monthname})
+                            MERGE (m: Month {monthname: $monthname, year: $year, month: $month})
                             MERGE (y)-[:HAS_MONTH]->(m)
-                            MERGE (d: Day {dayname: $dayname})
+                            MERGE (d: Day {dayname: $dayname, year: $year, month: $month, day: $day})
                             MERGE (m)-[:HAS_DAY]->(d)
-                            MERGE (h: Hour {hourname: $hourname})
+                            MERGE (h: Hour {hourname: $hourname, year: $year, month: $month, day: $day, hour: $hour})
                             MERGE (d)-[:HAS_HOUR]->(h)
                             CREATE (r: Reading {readingid: $readingid, tempf: $tempf, humidity: $humidity, windspeed: $windspeed, solarad: $solarad, rainfallhrly: $rainfallhrly})
                             CREATE (r)-[:RECORDED_BY]->(s)
@@ -118,6 +122,10 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> None:
                         monthname=new_weather_data.weathermonth,
                         dayname=new_weather_data.weatherday,
                         hourname=new_weather_data.weatherhour,
+                                                            year=year,
+                                                            month=month,
+                                                            day=day,
+                                                            hour=hour,
                                                             readingid=new_weather_data.weatherdate,
                                                             tempf=new_weather_data.tempf,
                                                             humidity=new_weather_data.humidity,
@@ -130,7 +138,7 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> None:
         row_summary = summary
         db_counters.update_counts(row_summary.counters)
 
-        logger.info(f"There were {db_counters.nodes_created} nodes created and {db_counters.relationships_created} relationships created")
+        logger.debug(f"There were {db_counters.nodes_created} nodes created and {db_counters.relationships_created} relationships created")
 
     except neo4j.exceptions.ConstraintError as con:
         logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")

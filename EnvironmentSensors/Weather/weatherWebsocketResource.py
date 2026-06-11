@@ -94,9 +94,9 @@ async def process_weather_data(current_data):
                 'rainfallhrly': current_data['hourlyrainin'],
                 'weatherdate': parsed_datetime.strftime("%Y-%m-%d %H:%M:%S"),
                 'weatheryear': parsed_datetime.strftime("%Y"),
-                'weathermonth': parsed_datetime.strftime("%m"),
-                'weatherday': parsed_datetime.strftime("%d"),
-                'weatherhour': parsed_datetime.strftime("%H")
+                'weathermonth': parsed_datetime.strftime("%Y-%m"),
+                'weatherday': parsed_datetime.strftime("%Y-%m-%d"),
+                'weatherhour': parsed_datetime.strftime("%Y-%m-%d:%H")
             })
 
             # when the hour changes, process the completed hour's accumulated data
@@ -124,7 +124,7 @@ async def process_weather_data(current_data):
                         'rainfallhrly': last_reading['rainfallhrly'],
                     }
                     weather_data = WeatherData(**data)
-                    logger.info(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.debug(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_weather_data_to_database(weather_data)
 
