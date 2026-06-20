@@ -56,7 +56,7 @@ async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
         async with AsyncClient() as client:
             response = await client.post(db_url+'/add-new-weather-data', json=new_weather_data.model_dump())
             response.raise_for_status()
-            logger.info(f'request to add new weather data completed successfully!')
+            logger.debug(f'request to add new weather data completed successfully!')
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
