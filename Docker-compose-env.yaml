@@ -4,7 +4,36 @@
 # - neo4j dataserver for environment data
 # - weather data collection application
 
+name: cabinenv
+
 services:
+  weatherdata:
+    # cabindock/weatherdata:latest-amd
+    image: cabindock/weatherdata:latest-arm
+    container_name: weatherdata
+    environment:
+      - NEO4J_DATA_API_URL=http://neo4j-env-dataserver:8000
+      - LOG_LEVEL=DEBUG
+    networks:
+      - cabin-network
+    depends_on:
+      - neo4j-db
+      - neo4j-env-dataserver
+
+  neo4j-env-dataserver:
+    # image: cabindock/neo4j-env-dataserver:latest-amd
+    image: cabindock/neo4j-env-dataserver:latest-arm
+    container_name: neo4j-env-dataserver
+    ports:
+      - "8000:8000"
+    environment:
+      - NEO4J_ENV_CONNECTION_STR=bolt://neo4j-db:7687
+      - LOG_LEVEL=DEBUG
+    networks:
+      - cabin-network
+    depends_on:
+      - neo4j-db
+
   neo4j-db:
     image: neo4j:2026.04.0-community-ubi10
     container_name: neo4j-db
@@ -15,30 +44,8 @@ services:
     environment:
       - NEO4J_AUTH=none
     volumes:
-      - /mnt/neo4j/environment/data:/data
-    networks:
-      - cabin-network
-
-  neo4j-env-dataserver:
-    image: cabindock/neo4j-env-dataserver:latest-amd
-    container_name: neo4j-env-dataserver
-    ports:
-      - "8000:8000"
-    environment:
-      - NEO4J_ENV_CONNECTION_STR=bolt://neo4j-db:7687
-    depends-on:
-      - neo4j-db
-    networks:
-      - cabin-network
-
-  weatherdata:
-    image: cabindock/weatherdata:latest-amd
-    container_name: weatherdata
-    environment:
-      - NEO4J_DATA_API_URL=http://neo4j-env-dataserver:8000
-    depends-on:
-      - neo4j-db
-      - neo4j-env-dataserver
+      # - /mnt/neo4j/environment/data:/data
+      - /Users/jeffrey/SynologyDrive/database/neo4j-test/data:/data
     networks:
       - cabin-network
 
