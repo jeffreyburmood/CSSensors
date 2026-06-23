@@ -1,5 +1,5 @@
 
-# this docker compose file contains the instructions to launch and orchestrate the following containers:
+# this docker compose file contains the instructions to launch and orchestrate the following containers on the linux servers:
 # - neo4j database for environment data
 # - neo4j dataserver for environment data
 # - weather data collection application
@@ -8,11 +8,11 @@ name: cabinenv
 
 services:
   weatherdata:
-    # cabindock/weatherdata:latest-amd
-    image: cabindock/weatherdata:latest-arm
+    image: cabindock/weatherdata:latest-amd
     container_name: weatherdata
     environment:
       - NEO4J_DATA_API_URL=http://neo4j-env-dataserver:8000
+      - NATS_SERVER="nats://nats-server-1:4222"
       - LOG_LEVEL=INFO
     networks:
       - cabin-network
@@ -21,8 +21,7 @@ services:
       - neo4j-env-dataserver
 
   neo4j-env-dataserver:
-    # image: cabindock/neo4j-env-dataserver:latest-amd
-    image: cabindock/neo4j-env-dataserver:latest-arm
+    image: cabindock/neo4j-env-dataserver:latest-amd
     container_name: neo4j-env-dataserver
     ports:
       - "8000:8000"
@@ -35,7 +34,7 @@ services:
       - neo4j-db
 
   neo4j-db:
-    image: neo4j:2026.04.0-community-ubi10
+    image: neo4j:5.21.0
     container_name: neo4j-db
     restart: always
     ports:
@@ -44,8 +43,7 @@ services:
     environment:
       - NEO4J_AUTH=none
     volumes:
-      # - /mnt/neo4j/environment/data:/data
-      - /Users/jeffrey/SynologyDrive/database/neo4j-test/data:/data
+      - /mnt/neo4j/environment/data:/data
     networks:
       - cabin-network
 
