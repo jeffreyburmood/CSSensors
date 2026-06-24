@@ -12,7 +12,7 @@ services:
     container_name: weatherdata
     environment:
       - NEO4J_DATA_API_URL=http://neo4j-env-dataserver:8000
-      - NATS_SERVER="nats://nats-server-1:4222"
+      - NATS_SERVER=nats://nats-server-1:4222
       - LOG_LEVEL=INFO
     networks:
       - cabin-network
