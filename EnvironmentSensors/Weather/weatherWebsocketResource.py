@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 
 from httpx import AsyncClient, HTTPStatusError
 
-from SensorDataMgmt.environmentDataModel import WeatherData
+from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
 
 from aioambient import Websocket
 from dotenv import load_dotenv
@@ -57,6 +57,42 @@ async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
             response = await client.post(db_url+'/add-new-weather-data', json=new_weather_data.model_dump())
             response.raise_for_status()
             logger.debug(f'request to add new weather data completed successfully!')
+
+    except HTTPStatusError as http_error:
+        logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        raise
+
+async def add_interior_data_to_database(new_interior_data: InteriorData) -> None:
+    """ the coroutine makes the actual fastapi call to add the new interior data to the db"""
+    method_name = add_interior_data_to_database.__name__
+
+    try:
+        db_url = os.getenv('NEO4J_DATA_API_URL')
+
+        async with AsyncClient() as client:
+            response = await client.post(db_url+'/add-new-interior-data', json=new_interior_data.model_dump())
+            response.raise_for_status()
+            logger.debug(f'request to add new interior data completed successfully!')
+
+    except HTTPStatusError as http_error:
+        logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        raise
+
+async def add_basement_data_to_database(new_basement_data: BasementData) -> None:
+    """ the coroutine makes the actual fastapi call to add the new basement data to the db"""
+    method_name = add_basement_data_to_database.__name__
+
+    try:
+        db_url = os.getenv('NEO4J_DATA_API_URL')
+
+        async with AsyncClient() as client:
+            response = await client.post(db_url+'/add-new-basement-data', json=new_basement_data.model_dump())
+            response.raise_for_status()
+            logger.debug(f'request to add new basement data completed successfully!')
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
@@ -137,6 +173,141 @@ async def process_weather_data(current_data):
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
         raise
 
+async def process_interior_data(current_data):
+    """
+    Takes the current real time cabin interior data and extracts the relevant data and stores it in the database.
+    Accumulates temperature data and reports the median temperature once per hour.
+    :param current_data: Dictionary of retrieved weather station data
+    """
+
+    method_name = process_interior_data.__name__
+
+    global _interior_accumulator, _last_processed_hour
+
+    try:
+        mac_addr = os.getenv('CABIN_MAC')
+
+        if current_data['macAddress'] == mac_addr:
+            local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
+            logger.debug(f'local date time = {local_datetime}')
+
+            parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
+            hour_key = (parsed_datetime.date(), parsed_datetime.hour)
+
+            # accumulate temperature readings for the current hour
+            _interior_accumulator[hour_key].append({
+                'tempf': current_data['tempinf'],
+                'humidity': current_data['humidityin'],
+                'interiordate': parsed_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                'interioryear': parsed_datetime.strftime("%Y"),
+                'interiormonth': parsed_datetime.strftime("%Y-%m"),
+                'interiorday': parsed_datetime.strftime("%Y-%m-%d"),
+                'interiorhour': parsed_datetime.strftime("%Y-%m-%d:%H")
+            })
+
+            # when the hour changes, process the completed hour's accumulated data
+            if _last_processed_hour is not None and _last_processed_hour != hour_key:
+                completed_hour_readings = _interior_accumulator.pop(_last_processed_hour, [])
+
+                if completed_hour_readings:
+                    median_tempf = statistics.median(r['tempf'] for r in completed_hour_readings)
+
+                    # use the last reading of the hour for non-accumulated fields
+                    last_reading = completed_hour_readings[-1]
+
+                    data = {
+                        'location': 'cabin-interior',
+                        'sensor': 'interior-sensor',
+                        'interiordate': last_reading['interiordate'],
+                        'interioryear': last_reading['interioryear'],
+                        'interiormonth': last_reading['interiormonth'],
+                        'interiorday': last_reading['interiorday'],
+                        'interiorhour': last_reading['interiorhour'],
+                        'tempf': median_tempf,
+                        'humidity': last_reading['humidity'],
+                    }
+                    interior_data = InteriorData(**data)
+                    logger.debug(f'Interior Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+
+                    await add_interior_data_to_database(interior_data)
+
+            _last_processed_hour = hour_key
+
+        else:
+            pass
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        raise
+
+async def process_basement_data(current_data):
+    """
+    Takes the current real time cabin basement data and extracts the relevant data and stores it in the database.
+    Accumulates temperature data and reports the median temperature once per hour.
+    :param current_data: Dictionary of retrieved weather station data
+    """
+
+    method_name = process_basement_data.__name__
+
+    global _basement_accumulator, _last_processed_hour
+
+    try:
+        mac_addr = os.getenv('CABIN_MAC')
+
+        if current_data['macAddress'] == mac_addr:
+            local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
+            logger.debug(f'local date time = {local_datetime}')
+
+            parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
+            hour_key = (parsed_datetime.date(), parsed_datetime.hour)
+
+            # accumulate temperature readings for the current hour
+            _basement_accumulator[hour_key].append({
+                'tempf': current_data['temp1f'],
+                'humidity': current_data['humidity1'],
+                'basementdate': parsed_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                'basementyear': parsed_datetime.strftime("%Y"),
+                'basementmonth': parsed_datetime.strftime("%Y-%m"),
+                'basementday': parsed_datetime.strftime("%Y-%m-%d"),
+                'basementhour': parsed_datetime.strftime("%Y-%m-%d:%H")
+            })
+
+            # when the hour changes, process the completed hour's accumulated data
+            if _last_processed_hour is not None and _last_processed_hour != hour_key:
+                completed_hour_readings = _basement_accumulator.pop(_last_processed_hour, [])
+
+                if completed_hour_readings:
+                    median_tempf = statistics.median(r['tempf'] for r in completed_hour_readings)
+
+                    # use the last reading of the hour for non-accumulated fields
+                    last_reading = completed_hour_readings[-1]
+
+                    data = {
+                        'location': 'cabin-basement',
+                        'sensor': 'basement-sensor',
+                        'basementdate': last_reading['basementdate'],
+                        'basementyear': last_reading['basementyear'],
+                        'basementmonth': last_reading['basementmonth'],
+                        'basementday': last_reading['basementday'],
+                        'basementhour': last_reading['basementhour'],
+                        'tempf': median_tempf,
+                        'humidity': last_reading['humidity'],
+                    }
+                    basement_data = BasementData(**data)
+                    logger.debug(f'BasementData object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+
+                    await add_basement_data_to_database(basement_data)
+
+            _last_processed_hour = hour_key
+
+        else:
+            pass
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        raise
+
+
 # Define a method that should be fired when the websocket client
 # connects:
 def connect_method():
@@ -175,6 +346,8 @@ async def data_coroutine(data):
     try:
         logger.debug(f"Data received async: {data}")
         await process_weather_data(data)
+        await process_interior_data(data)
+        await process_basement_data(data)
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')

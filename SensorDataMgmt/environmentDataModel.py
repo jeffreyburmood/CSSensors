@@ -18,3 +18,28 @@ class WeatherData(BaseModel):
     solarad: float
     rainfallhrly: float
 
+class InteriorData(BaseModel):
+    location: str
+    sensor: str
+    interiordate: str
+    interioryear: str
+    interiormonth: str
+    interiorday: str
+    interiorhour: str
+    tempf: float
+    humidity: float
+
+class BasementData(BaseModel):
+    location: str
+    sensor: str
+    basementdate: str
+    basementyear: str
+    basementmonth: str
+    basementday: str
+    basementhour: str
+    tempf: float
+    humidity: float
+
+class BatteryData(BaseModel):
+    location: str
+    sensor: str
