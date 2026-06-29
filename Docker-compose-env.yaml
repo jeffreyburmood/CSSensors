@@ -1,0 +1,54 @@
+
+# this docker compose file contains the instructions to launch and orchestrate the following containers:
+# - neo4j database for environment data
+# - neo4j dataserver for environment data
+# - weather data collection application
+
+name: cabinenv
+
+services:
+  weatherdata:
+    # cabindock/weatherdata:latest-amd
+    image: cabindock/weatherdata:latest-arm
+    container_name: weatherdata
+    environment:
+      - NEO4J_DATA_API_URL=http://neo4j-env-dataserver:8000
+      - LOG_LEVEL=DEBUG
+    networks:
+      - cabin-network
+    depends_on:
+      - neo4j-db
+      - neo4j-env-dataserver
+
+  neo4j-env-dataserver:
+    # image: cabindock/neo4j-env-dataserver:latest-amd
+    image: cabindock/neo4j-env-dataserver:latest-arm
+    container_name: neo4j-env-dataserver
+    ports:
+      - "8000:8000"
+    environment:
+      - NEO4J_ENV_CONNECTION_STR=bolt://neo4j-db:7687
+      - LOG_LEVEL=DEBUG
+    networks:
+      - cabin-network
+    depends_on:
+      - neo4j-db
+
+  neo4j-db:
+    image: neo4j:2026.04.0-community-ubi10
+    container_name: neo4j-db
+    restart: always
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      - NEO4J_AUTH=none
+    volumes:
+      # - /mnt/neo4j/environment/data:/data
+      - /Users/jeffrey/SynologyDrive/database/neo4j-test/data:/data
+    networks:
+      - cabin-network
+
+networks:
+  cabin-network:
+    external: true
