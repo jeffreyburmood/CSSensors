@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 
 from SensorDataMgmt.DataServer.neo4jConnector import Neo4jEnv
 from SensorDataMgmt.neo4jDataModel import DBCounters
-from SensorDataMgmt.environmentDataModel import WeatherData
+from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
 from utilities.logger import Logger
 
 app = FastAPI()
@@ -149,4 +149,130 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> None:
                             detail=f"Error occurred when trying to POST new weather data to the db, looks like {ex}")
 
 
+@app.post("/add-new-interior-data")
+async def add_new_interior_data(new_interior_data: InteriorData) -> None:
+    """ this method will add new interior environmental data to the neo4j database """
+
+    method_name = add_new_interior_data.__name__
+
+    try:
+        logger.debug(f'received POST request to the {method_name} route')
+
+        driver = Neo4jEnv().get_db_driver()
+
+        db_counters = DBCounters()
+
+        # extract the individual datetime values for use as noe properties
+        year, month, day = new_interior_data.interiordate[:10].split("-")
+        hour, minute, second = new_interior_data.interiordate[11:].split(":")
+
+        # create the new weather data node  for the hour
+        records, summary, keys = await driver.execute_query("""
+                            MERGE (l: Location {locationname: $locationname})
+                            MERGE (s: Sensor {sensorname: $sensorname})
+                            MERGE (s)-[:INSTALLED_AT]->(l)
+                            MERGE (y: Year {yearname: $yearname, year: $year})
+                            MERGE (l)-[:HAS_YEAR]->(y)
+                            MERGE (m: Month {monthname: $monthname, year: $year, month: $month})
+                            MERGE (y)-[:HAS_MONTH]->(m)
+                            MERGE (d: Day {dayname: $dayname, year: $year, month: $month, day: $day})
+                            MERGE (m)-[:HAS_DAY]->(d)
+                            MERGE (h: Hour {hourname: $hourname, year: $year, month: $month, day: $day, hour: $hour})
+                            MERGE (d)-[:HAS_HOUR]->(h)
+                            CREATE (r: Reading {readingid: $readingid, tempf: $tempf, humidity: $humidity})
+                            CREATE (r)-[:RECORDED_BY]->(s)
+                            CREATE (r)-[:OCCURRED_AT]->(h)
+                        """,
+                        locationname=new_interior_data.location,
+                        sensorname=new_interior_data.sensor,
+                        yearname=new_interior_data.interioryear,
+                        monthname=new_interior_data.interiormonth,
+                        dayname=new_interior_data.interiorday,
+                        hourname=new_interior_data.interiorhour,
+                                                            year=year,
+                                                            month=month,
+                                                            day=day,
+                                                            hour=hour,
+                                                            readingid=new_interior_data.interiordate,
+                                                            tempf=new_interior_data.tempf,
+                                                            humidity=new_interior_data.humidity,
+                         database_='neo4j',
+                        )
+
+        row_summary = summary
+        db_counters.update_counts(row_summary.counters)
+
+        logger.debug(f"There were {db_counters.nodes_created} nodes created and {db_counters.relationships_created} relationships created")
+
+    except neo4j.exceptions.ConstraintError as con:
+        logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")
+
+    except Exception as ex:
+        logger.error(f"Exception encountered in {method_name} looks like {ex}")
+        raise HTTPException(status_code=404,
+                            detail=f"Error occurred when trying to POST new interior data to the db, looks like {ex}")
+
+
+@app.post("/add-new-basement-data")
+async def add_new_basement_data(new_basement_data: BasementData) -> None:
+    """ this method will add new interior environmental data to the neo4j database """
+
+    method_name = add_new_basement_data.__name__
+
+    try:
+        logger.debug(f'received POST request to the {method_name} route')
+
+        driver = Neo4jEnv().get_db_driver()
+
+        db_counters = DBCounters()
+
+        # extract the individual datetime values for use as noe properties
+        year, month, day = new_basement_data.basementdate[:10].split("-")
+        hour, minute, second = new_basement_data.basementdate[11:].split(":")
+
+        # create the new weather data node  for the hour
+        records, summary, keys = await driver.execute_query("""
+                            MERGE (l: Location {locationname: $locationname})
+                            MERGE (s: Sensor {sensorname: $sensorname})
+                            MERGE (s)-[:INSTALLED_AT]->(l)
+                            MERGE (y: Year {yearname: $yearname, year: $year})
+                            MERGE (l)-[:HAS_YEAR]->(y)
+                            MERGE (m: Month {monthname: $monthname, year: $year, month: $month})
+                            MERGE (y)-[:HAS_MONTH]->(m)
+                            MERGE (d: Day {dayname: $dayname, year: $year, month: $month, day: $day})
+                            MERGE (m)-[:HAS_DAY]->(d)
+                            MERGE (h: Hour {hourname: $hourname, year: $year, month: $month, day: $day, hour: $hour})
+                            MERGE (d)-[:HAS_HOUR]->(h)
+                            CREATE (r: Reading {readingid: $readingid, tempf: $tempf, humidity: $humidity})
+                            CREATE (r)-[:RECORDED_BY]->(s)
+                            CREATE (r)-[:OCCURRED_AT]->(h)
+                        """,
+                        locationname=new_basement_data.location,
+                        sensorname=new_basement_data.sensor,
+                        yearname=new_basement_data.basementyear,
+                        monthname=new_basement_data.basementmonth,
+                        dayname=new_basement_data.basementday,
+                        hourname=new_basement_data.basementhour,
+                                                            year=year,
+                                                            month=month,
+                                                            day=day,
+                                                            hour=hour,
+                                                            readingid=new_basement_data.basementdate,
+                                                            tempf=new_basement_data.tempf,
+                                                            humidity=new_basement_data.humidity,
+                         database_='neo4j',
+                        )
+
+        row_summary = summary
+        db_counters.update_counts(row_summary.counters)
+
+        logger.debug(f"There were {db_counters.nodes_created} nodes created and {db_counters.relationships_created} relationships created")
+
+    except neo4j.exceptions.ConstraintError as con:
+        logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")
+
+    except Exception as ex:
+        logger.error(f"Exception encountered in {method_name} looks like {ex}")
+        raise HTTPException(status_code=404,
+                            detail=f"Error occurred when trying to POST new interior data to the db, looks like {ex}")
 

@@ -13,7 +13,7 @@ services:
     container_name: weatherdata
     environment:
       - NEO4J_DATA_API_URL=http://neo4j-env-dataserver:8000
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=DEBUG
     networks:
       - cabin-network
     depends_on:
@@ -28,7 +28,7 @@ services:
       - "8000:8000"
     environment:
       - NEO4J_ENV_CONNECTION_STR=bolt://neo4j-db:7687
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=DEBUG
     networks:
       - cabin-network
     depends_on:

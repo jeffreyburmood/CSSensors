@@ -79,9 +79,9 @@ async def process_messages():
         nc = await nats.connect(nats_server_url)
 
         # set up subscribers
-        sub_start = await nc.subscribe('cmd.esg.weather.start', cb=handle_start_msg)
-        sub_stop = await nc.subscribe('cmd.esg.weather.stop', cb=handle_stop_msg)
-        sub_terminate = await nc.subscribe('cmd.esg.weather.terminate', cb=handle_terminate_msg)
+        sub_start = await nc.subscribe('cmd.env.weather.start', cb=handle_start_msg)
+        sub_stop = await nc.subscribe('cmd.env.weather.stop', cb=handle_stop_msg)
+        sub_terminate = await nc.subscribe('cmd.env.weather.terminate', cb=handle_terminate_msg)
         subscriptions = [sub_start, sub_stop, sub_terminate]
 
         # don't do anymore in this task until a terminate message is received and the event flag is set

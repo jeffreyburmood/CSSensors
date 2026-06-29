@@ -19,7 +19,11 @@ from collections import defaultdict
 
 # persistent state for accumulating temperature data
 _weather_accumulator = defaultdict(list)
+_interior_accumulator = defaultdict(list)
+_basement_accumulator = defaultdict(list)
 _last_processed_hour = None
+_last_interior_processed_hour = None
+_last_basement_processed_hour = None
 
 logger = Logger.get_logger()
 load_dotenv()
@@ -182,7 +186,7 @@ async def process_interior_data(current_data):
 
     method_name = process_interior_data.__name__
 
-    global _interior_accumulator, _last_processed_hour
+    global _interior_accumulator, _last_interior_processed_hour
 
     try:
         mac_addr = os.getenv('CABIN_MAC')
@@ -206,8 +210,8 @@ async def process_interior_data(current_data):
             })
 
             # when the hour changes, process the completed hour's accumulated data
-            if _last_processed_hour is not None and _last_processed_hour != hour_key:
-                completed_hour_readings = _interior_accumulator.pop(_last_processed_hour, [])
+            if _last_interior_processed_hour is not None and _last_interior_processed_hour != hour_key:
+                completed_hour_readings = _interior_accumulator.pop(_last_interior_processed_hour, [])
 
                 if completed_hour_readings:
                     median_tempf = statistics.median(r['tempf'] for r in completed_hour_readings)
@@ -216,7 +220,7 @@ async def process_interior_data(current_data):
                     last_reading = completed_hour_readings[-1]
 
                     data = {
-                        'location': 'cabin-interior',
+                        'location': 'cabin',
                         'sensor': 'interior-sensor',
                         'interiordate': last_reading['interiordate'],
                         'interioryear': last_reading['interioryear'],
@@ -227,11 +231,11 @@ async def process_interior_data(current_data):
                         'humidity': last_reading['humidity'],
                     }
                     interior_data = InteriorData(**data)
-                    logger.debug(f'Interior Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.debug(f'Interior Data object (median temp for hour {_last_interior_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_interior_data_to_database(interior_data)
 
-            _last_processed_hour = hour_key
+            _last_interior_processed_hour = hour_key
 
         else:
             pass
@@ -249,7 +253,7 @@ async def process_basement_data(current_data):
 
     method_name = process_basement_data.__name__
 
-    global _basement_accumulator, _last_processed_hour
+    global _basement_accumulator, _last_basement_processed_hour
 
     try:
         mac_addr = os.getenv('CABIN_MAC')
@@ -273,8 +277,8 @@ async def process_basement_data(current_data):
             })
 
             # when the hour changes, process the completed hour's accumulated data
-            if _last_processed_hour is not None and _last_processed_hour != hour_key:
-                completed_hour_readings = _basement_accumulator.pop(_last_processed_hour, [])
+            if _last_basement_processed_hour is not None and _last_basement_processed_hour != hour_key:
+                completed_hour_readings = _basement_accumulator.pop(_last_basement_processed_hour, [])
 
                 if completed_hour_readings:
                     median_tempf = statistics.median(r['tempf'] for r in completed_hour_readings)
@@ -283,7 +287,7 @@ async def process_basement_data(current_data):
                     last_reading = completed_hour_readings[-1]
 
                     data = {
-                        'location': 'cabin-basement',
+                        'location': 'cabin',
                         'sensor': 'basement-sensor',
                         'basementdate': last_reading['basementdate'],
                         'basementyear': last_reading['basementyear'],
@@ -294,11 +298,11 @@ async def process_basement_data(current_data):
                         'humidity': last_reading['humidity'],
                     }
                     basement_data = BasementData(**data)
-                    logger.debug(f'BasementData object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.debug(f'BasementData object (median temp for hour {_last_basement_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_basement_data_to_database(basement_data)
 
-            _last_processed_hour = hour_key
+            _last_basement_processed_hour = hour_key
 
         else:
             pass
