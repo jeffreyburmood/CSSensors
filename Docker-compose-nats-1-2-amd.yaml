@@ -1,0 +1,35 @@
+
+name: cssnats
+
+services:
+  nats-server-1:
+    image: nats:2.12.8-alpine
+    container_name: nats-server-1
+    restart: unless-stopped
+    volumes:
+      - ./nats/nats-server-1.conf:/etc/nats/nats-server-1.conf:ro
+    command: ["-c", "/etc/nats/nats-server-1.conf"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
+    networks:
+      - cabin-network
+
+  nats-server-2:
+    image: nats:2.12.8-alpine
+    container_name: nats-server-2
+    restart: unless-stopped
+    volumes:
+      - ./nats/nats-server-2.conf:/etc/nats/nats-server-2.conf:ro
+    command: ["-c", "/etc/nats/nats-server-2.conf"]
+    ports:
+      - "4223:4222"
+      - "8223:8222"
+      - "6223:6222"
+    networks:
+      - cabin-network
+
+networks:
+  cabin-network:
+    external: true
