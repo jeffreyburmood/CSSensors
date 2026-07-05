@@ -108,10 +108,11 @@ async def process_messages():
         # once the terminate message is received, the websocket connection has already been closed so
         # shutdown and clean up the nats client
         logger.info("Shutting down nats client connections...")
-        for sub in subscriptions:
-            await sub.unsubscribe()
-        await nc.drain()
-        await nc.close()
+        #for sub in subscriptions:
+        #    await sub.unsubscribe()
+        #await nc.drain()
+        #await nc.close()
+        await nc.disconnect()
         logger.info("All nats connections closed.")
 
         termination_event.set()

@@ -178,58 +178,10 @@ class NATSClientManager:
                 logger.info(f"Unsubscribed from subject '{sub.subject}'")
 
             self._subscriptions.clear()
-            await self._nc.drain()
+            await self._nc.drain() # the connection is closed automatically after flushing
             logger.info("NATS connection drained and closed")
 
         except Exception as e:
             logger.error(f"Error during NATS disconnect: {e}")
             raise
 
-
-# ---------------------------------------------------------------------------
-# Example usage
-# ---------------------------------------------------------------------------
-
-async def on_message(msg):
-    subject = msg.subject
-    data = msg.data.decode()
-    logger.info(f"Received message on [{subject}]: {data}")
-
-
-async def on_error(e):
-    logger.error(f"Application received NATS error: {e}")
-
-
-async def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    )
-
-    subscriptions = [
-        {"subject": "test.subject", "callback": on_message},
-        {"subject": "test.queue", "callback": on_message, "queue_group": "workers"},
-    ]
-
-    client = NATSClientManager(
-        servers=["nats://localhost:4222", "nats://localhost:4223"],
-        subscriptions=subscriptions,
-        error_cb=on_error,
-    )
-
-    await client.connect()
-
-    try:
-        await client.publish("test.subject", "Hello NATS Cluster")
-
-        while True:
-            await asyncio.sleep(1)
-
-    except KeyboardInterrupt:
-        pass
-    finally:
-        await client.disconnect()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
