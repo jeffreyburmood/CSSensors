@@ -89,9 +89,9 @@ async def process_messages():
         # sub_start = await nc.subscribe('cmd.env.weather.start', cb=handle_start_msg)
         # sub_stop = await nc.subscribe('cmd.env.weather.stop', cb=handle_stop_msg)
         # sub_terminate = await nc.subscribe('cmd.env.weather.terminate', cb=handle_terminate_msg)
-        sub_start = {'subject': 'cmd.env.weather.start', 'callback': 'handle_start_msg'}
-        sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': 'handle_stop_msg'}
-        sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': 'handle_terminate_msg'}
+        sub_start = {'subject': 'cmd.env.weather.start', 'callback': handle_start_msg}
+        sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': handle_stop_msg}
+        sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': handle_terminate_msg}
         subscriptions = [sub_start, sub_stop, sub_terminate]
 
         nc = NATSClientManager(
