@@ -2,6 +2,7 @@ import asyncio
 import os
 import nats
 
+from Nats.natsClientManager import NATSClientManager
 from utilities.logger import Logger
 from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
 from dotenv import load_dotenv
@@ -69,20 +70,37 @@ async def handle_terminate_msg(msg):
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
         raise
 
+async def on_error(e):
+    logger.error(f"Application received the following NATS error: {e}")
+
 async def process_messages():
     try:
         method_name = process_messages.__name__
 
-        load_dotenv()
+        # load_dotenv()
 
-        nats_server_url = os.getenv('NATS_SERVER')
-        nc = await nats.connect(nats_server_url)
+        # nats_server_url = os.getenv('NATS_SERVER')
+        # nc = await nats.connect(nats_server_url)
+
+        # set up nats servers and connect to the nats cluster
+        servers = ['nats://nats-server-1:4222', 'nats://nats-server-2:4222']
 
         # set up subscribers
-        sub_start = await nc.subscribe('cmd.env.weather.start', cb=handle_start_msg)
-        sub_stop = await nc.subscribe('cmd.env.weather.stop', cb=handle_stop_msg)
-        sub_terminate = await nc.subscribe('cmd.env.weather.terminate', cb=handle_terminate_msg)
+        # sub_start = await nc.subscribe('cmd.env.weather.start', cb=handle_start_msg)
+        # sub_stop = await nc.subscribe('cmd.env.weather.stop', cb=handle_stop_msg)
+        # sub_terminate = await nc.subscribe('cmd.env.weather.terminate', cb=handle_terminate_msg)
+        sub_start = {'subject': 'cmd.env.weather.start', 'callback': 'handle_start_msg'}
+        sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': 'handle_stop_msg'}
+        sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': 'handle_terminate_msg'}
         subscriptions = [sub_start, sub_stop, sub_terminate]
+
+        nc = NATSClientManager(
+            servers=servers,
+            subscriptions=subscriptions,
+            error_cb=on_error,
+        )
+
+        await nc.connect()
 
         # don't do anymore in this task until a terminate message is received and the event flag is set
         await nats_shutdown_event.wait()
