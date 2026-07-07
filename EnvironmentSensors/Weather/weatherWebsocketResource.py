@@ -377,13 +377,14 @@ def configure_websocket() -> Websocket:
     """ this method will perform the weather websocket set needed before attempting to connect """
 
     method_name = configure_websocket.__name__
+    logger = Logger.get_logger()
 
     try:
         load_dotenv()
         API_KEY = os.getenv('AMBIENT_API_KEY')
         APP_KEY = os.getenv('AMBIENT_APPLICATION_KEY')
 
-        websocket = Websocket(APP_KEY, API_KEY)
+        websocket = Websocket(APP_KEY, API_KEY, logger=logger)
         websocket.on_connect(connect_method)
         websocket.on_subscribed(subscribed_method)
         websocket.async_on_data(data_coroutine)
