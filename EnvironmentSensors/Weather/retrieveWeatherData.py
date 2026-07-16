@@ -1,20 +1,17 @@
 import asyncio
-import os
-import nats
-
-from Nats.natsClientManager import NATSClientManager
-from utilities.logger import Logger
-from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
-from dotenv import load_dotenv
+import functools
 
 from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
+from Nats.natsClientManager import NATSClientManager
+from utilities.healthStatus import HealthContext
+from utilities.logger import Logger
 
 start_event = asyncio.Event()
 stop_event = asyncio.Event()
 termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
 
-async def process_websocket():
+async def process_websocket(health: HealthContext):
     try:
         while not termination_event.is_set():
             await start_event.wait()
@@ -24,9 +21,11 @@ async def process_websocket():
     finally:
         await asyncio.sleep(1)
 
-async def handle_start_msg(msg):
+async def handle_start_msg(msg, health: HealthContext):
+
+    method_name = handle_start_msg.__name__
+
     try:
-        method_name = handle_start_msg.__name__
 
         logger.info(f"Received message on subject: {msg.subject}, Starting WebSocket processing.")
         if not start_event.is_set():
@@ -37,12 +36,15 @@ async def handle_start_msg(msg):
             logger.info(f'Received {msg.subject} but websocket processing already started')
 
     except Exception as ex:
+        health.report_error()
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
         raise
 
-async def handle_stop_msg(msg):
+async def handle_stop_msg(msg, health: HealthContext):
+
+    method_name = handle_stop_msg.__name__
+
     try:
-        method_name = handle_stop_msg.__name__
 
         logger.info(f"Received message on subject: {msg.subject}, shutting down websocket connection.")
         if not stop_event.is_set():
@@ -56,9 +58,11 @@ async def handle_stop_msg(msg):
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
         raise
 
-async def handle_terminate_msg(msg):
+async def handle_terminate_msg(msg, health: HealthContext):
+
+    method_name = handle_terminate_msg.__name__
+
     try:
-        method_name = handle_terminate_msg.__name__
 
         logger.info(f"Received message on subject: {msg.subject}, Shutting down application.")
         stop_event.set()
@@ -70,12 +74,15 @@ async def handle_terminate_msg(msg):
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
         raise
 
-async def on_error(e):
+async def on_error(e, health: HealthContext):
+    health.report_error()
     logger.error(f"Application received the following NATS error: {e}")
 
-async def process_messages():
+async def process_messages(health: HealthContext):
+
+    method_name = process_messages.__name__
+
     try:
-        method_name = process_messages.__name__
 
         # load_dotenv()
 
@@ -89,15 +96,21 @@ async def process_messages():
         # sub_start = await nc.subscribe('cmd.env.weather.start', cb=handle_start_msg)
         # sub_stop = await nc.subscribe('cmd.env.weather.stop', cb=handle_stop_msg)
         # sub_terminate = await nc.subscribe('cmd.env.weather.terminate', cb=handle_terminate_msg)
-        sub_start = {'subject': 'cmd.env.weather.start', 'callback': handle_start_msg}
-        sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': handle_stop_msg}
-        sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': handle_terminate_msg}
+
+        # bind a health parameter to the callback functions so they can handle health context correctly
+        bound_handle_start_msg = functools.partial(handle_start_msg, health=health)
+        bound_handle_stop_msg = functools.partial(handle_stop_msg, health=health)
+        bound_handle_terminate_msg = functools.partial(handle_terminate_msg, health=health)
+        bound_on_error = functools.partial(on_error, health=health)
+        sub_start = {'subject': 'cmd.env.weather.start', 'callback': bound_handle_start_msg}
+        sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': bound_handle_stop_msg}
+        sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': bound_handle_terminate_msg}
         subscriptions = [sub_start, sub_stop, sub_terminate]
 
         nc = NATSClientManager(
             servers=servers,
             subscriptions=subscriptions,
-            error_cb=on_error,
+            error_cb=bound_on_error,
         )
 
         await nc.connect()
@@ -139,9 +152,11 @@ async def main() -> None:
     try:
         method_name = main.__name__
 
+        health = HealthContext()
+
         async with asyncio.TaskGroup() as tg:
-            tg.create_task(process_websocket())
-            tg.create_task(process_messages())
+            tg.create_task(process_websocket(health))
+            tg.create_task(process_messages(health))
             await termination_event.wait()
             tg.create_task(force_terminate_task_group())
 
@@ -168,9 +183,9 @@ async def main() -> None:
         logger.info("Application shutdown complete.")
 
 if __name__ == "__main__":
+    logger = Logger.get_logger()
     try:
-        logger = Logger.get_logger()
         asyncio.run(main())
 
-    except KeyboardInterrupt:
-        logger.info("Received KeyboardInterrupt, shutting down.")
+    except Exception as ex:
+        logger.error(f"Exception encountered trying to start main(), looks like {ex}")

@@ -14,9 +14,11 @@ Slightly more upfront design effort
 """
 import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timezone, tzinfo
 from enum import Enum
 from dataclasses import dataclass, field
+
+import pytz
 
 
 class HealthColor(str, Enum):
@@ -56,7 +58,7 @@ class HealthContext:
 
         self.events.append(
             HealthEvent(
-                timestamp=datetime.now(timezone.utc).isoformat(),
+                timestamp=datetime.now(tz=pytz.timezone('America/Denver')).isoformat(),
                 color=color,
                 error_type=error_type,
                 message=message,
