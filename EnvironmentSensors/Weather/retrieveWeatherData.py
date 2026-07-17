@@ -3,7 +3,7 @@ import functools
 
 from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
 from Nats.natsClientManager import NATSClientManager
-from utilities.healthStatus import HealthContext
+from utilities.healthStatus import HealthContext, HealthColor
 from utilities.logger import Logger
 
 start_event = asyncio.Event()
@@ -15,9 +15,9 @@ async def process_websocket(health: HealthContext):
     try:
         while not termination_event.is_set():
             await start_event.wait()
-            async with AsyncManagedWebsocketResource('weather') as websocket:
+            async with AsyncManagedWebsocketResource('weather', health=health) as websocket:
                 while not termination_event.is_set() and not stop_event.is_set():
-                    await asyncio.sleep(2) # handling the data events via the websocket performed in the resource object
+                    await asyncio.sleep(2)  # handling the data events via the websocket performed in the resource object
     finally:
         await asyncio.sleep(1)
 
@@ -36,9 +36,13 @@ async def handle_start_msg(msg, health: HealthContext):
             logger.info(f'Received {msg.subject} but websocket processing already started')
 
     except Exception as ex:
-        health.report_error()
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.RED,
+            error_type="HandleMsgError",
+            message=f"Exception encounter while handling start msg: looks like {ex}",
+            component=method_name,
+        )
 
 async def handle_stop_msg(msg, health: HealthContext):
 
@@ -56,7 +60,12 @@ async def handle_stop_msg(msg, health: HealthContext):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.RED,
+            error_type="HandleMsgError",
+            message=f"Exception encounter while handling stop msg: looks like {ex}",
+            component=method_name,
+        )
 
 async def handle_terminate_msg(msg, health: HealthContext):
 
@@ -72,10 +81,22 @@ async def handle_terminate_msg(msg, health: HealthContext):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.RED,
+            error_type="HandleMsgError",
+            message=f"Exception encounter while handling terminate msg: looks like {ex}",
+            component=method_name,
+        )
+
 
 async def on_error(e, health: HealthContext):
-    health.report_error()
+    method_name = on_error.__name__
+    health.report_error(
+        color=HealthColor.RED,
+        error_type="NATSClientError",
+        message=f"Failed to establish NATS client: {e}",
+        component=method_name,
+    )
     logger.error(f"Application received the following NATS error: {e}")
 
 async def process_messages(health: HealthContext):

@@ -1,5 +1,6 @@
 """ This file contains the class and associated methods for managing the weather data websocket in a Context Manager """
 import asyncio
+import functools
 import logging
 import os
 from datetime import datetime, timezone
@@ -12,6 +13,8 @@ from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, Basem
 
 from aioambient import Websocket
 from dotenv import load_dotenv
+
+from utilities.healthStatus import HealthContext, HealthColor
 from utilities.logger import Logger
 
 import statistics
@@ -314,7 +317,7 @@ async def process_basement_data(current_data):
 
 # Define a method that should be fired when the websocket client
 # connects:
-def connect_method():
+def connect_method(health: HealthContext):
     """Print a simple "connected" message."""
 
     method_name = connect_method.__name__
@@ -325,11 +328,17 @@ def connect_method():
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while trying to connect to websocket: looks like {ex}",
+            component=method_name,
+        )
         raise
 
 # Define a method that should be run upon subscribing to the Ambient
 # Weather cloud:
-def subscribed_method(data):
+def subscribed_method(data, health: HealthContext):
     """Print the data received upon subscribing."""
 
     method_name = subscribed_method.__name__
@@ -339,10 +348,15 @@ def subscribed_method(data):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while subscribing to websocket data: looks like {ex}",
+            component=method_name,
+        )
 
 # Alternatively, define a coroutine handler:
-async def data_coroutine(data):
+async def data_coroutine(data, health: HealthContext):
     """ process the data received by adding it to the database """
 
     method_name = data_coroutine.__name__
@@ -355,11 +369,16 @@ async def data_coroutine(data):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while processing websocket data: looks like {ex}",
+            component=method_name,
+        )
 
 # Define a method that should be run when the websocket client
 # disconnects:
-async def disconnect_coroutine(data):
+async def disconnect_coroutine(data, health: HealthContext):
     """Wait for 3 seconds, then print a simple "goodbye" message."""
 
     method_name = disconnect_coroutine.__name__
@@ -370,35 +389,49 @@ async def disconnect_coroutine(data):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while disconnecting websocket client: looks like {ex}",
+            component=method_name,
+        )
 
 
-def configure_websocket() -> Websocket:
+def configure_websocket(health: HealthContext) -> Websocket:
     """ this method will perform the weather websocket set needed before attempting to connect """
 
     method_name = configure_websocket.__name__
-    logger = Logger.get_logger()
 
     try:
         load_dotenv()
         API_KEY = os.getenv('AMBIENT_API_KEY')
         APP_KEY = os.getenv('AMBIENT_APPLICATION_KEY')
 
+        bound_handle_connect_method = functools.partial(connect_method, health=health)
+        bound_handle_subscribed_method = functools.partial(subscribed_method, health=health)
+        bound_handle_data_coroutine = functools.partial(data_coroutine, health=health)
+        bound_handle_disconnect_coroutine = functools.partial(disconnect_coroutine, health=health)
+
         websocket = Websocket(APP_KEY, API_KEY, logger=logger)
-        websocket.on_connect(connect_method)
-        websocket.on_subscribed(subscribed_method)
-        websocket.async_on_data(data_coroutine)
-        websocket.async_on_disconnect(disconnect_coroutine)
+        websocket.on_connect(bound_handle_connect_method)
+        websocket.on_subscribed(bound_handle_subscribed_method)
+        websocket.async_on_data(bound_handle_data_coroutine)
+        websocket.async_on_disconnect(bound_handle_disconnect_coroutine)
 
         return websocket
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while configuring websocket: looks like {ex}",
+            component=method_name,
+        )
 
 class AsyncManagedWebsocketResource:
     """ this class defines a websocket resource to be managed within an async Context Manager """
-    def __init__(self, name,
+    def __init__(self, name, health: HealthContext,
                  simulate_acquire_fail: bool = False,
                  simulate_release_fail: bool = False,
                  suppress_release_exception: bool = False):
@@ -414,60 +447,85 @@ class AsyncManagedWebsocketResource:
         # self.suppress_release_exception = suppress_release_exception
         # resource will be set in __aenter__ if acquisition succeeds
         self.resource = None
+        self.logger = Logger.get_logger()
+        self.health = health
 
     async def __aenter__(self):
 
+        method_name = 'AsyncManagedWebSocket.__aenter__'
+
         try:
             self.resource = await self._acquire()
-            logger.debug(f"[{self.name}] __aenter__ -> acquired: {self.resource}")
+            self.logger.debug(f"[{self.name}] __aenter__ -> acquired: {self.resource}")
             return self.resource
 
-        except Exception as e:
-            logger.error(f"[{self.name}] __aenter__ failed: {e}")
+        except Exception as ex:
+            self.logger.error(f"[{self.name}] __aenter__ failed: {ex}")
             # Re-raise so callers know acquisition failed and the with-block never runs
-            raise
+            self.health.report_error(
+                color=HealthColor.RED,
+                error_type="WebSocketContextManagerError",
+                message=f"Exception encounter while entering AsyncManagedWebsocketResource: looks like {ex}",
+                component=method_name,
+            )
+            return None
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
 
+        method_name = 'AsyncManagedWebSocket.__aexit__'
         try:
             # Only try to release if resource was acquired
             if self.resource is None:
-                logger.debug(f"[{self.name}] __aexit__: nothing to release.")
+                self.logger.debug(f"[{self.name}] __aexit__: nothing to release.")
                 return False  # don't suppress exceptions from the with-block
 
             await self._release()
-            logger.debug(f"[{self.name}] __aexit__ -> released successfully.")
-        except Exception as e:
-            logging.error(f"[{self.name}] __aexit__ failed to release: {e}")
-            # Decide whether to suppress the release exception
-            # Return False to propagate any exception from the with-block (default behavior)
+            self.logger.debug(f"[{self.name}] __aexit__ -> released successfully.")
+        except Exception as ex:
+            self.logger.error(f"[{self.name}] __aexit__ failed to release: {ex}")
+            self.health.report_error(
+                color=HealthColor.RED,
+                error_type="WebSocketContextManagerError",
+                message=f"Exception encounter while exiting AsyncManagedWebsocketResource: looks like {ex}",
+                component=method_name,
+            )
             return False
 
     async def _acquire(self) -> Websocket | None:
 
+        method_name = 'AsyncManagedWebSocket._acquire'
         try:
             # simulate async acquisition work
-            logger.debug(f"[{self.name}] acquiring (async)...")
-            websocket = configure_websocket()
+            self.logger.debug(f"[{self.name}] acquiring (async)...")
+            websocket = configure_websocket(self.health)
             await websocket.connect()
             return websocket
 
-        except Exception as e:
-            logging.error(f"[{self.name}] __acquire__ failed to acquire: {e}")
-            # Decide whether to suppress the release exception
-            # Return None to propagate any exception from the with-block (default behavior)
+        except Exception as ex:
+            self.logger.error(f"[{self.name}] __acquire__ failed to acquire: {ex}")
+            self.health.report_error(
+                color=HealthColor.RED,
+                error_type="WebSocketContextManagerError",
+                message=f"Exception encounter while acquiring in AsyncManagedWebsocketResource: looks like {ex}",
+                component=method_name,
+            )
             return None
 
     async def _release(self):
 
+        method_name = 'AsyncManagedWebSocket._release'
         try:
             # simulate async release work
-            logger.debug(f"[{self.name}] releasing (async)...")
+            self.logger.debug(f"[{self.name}] releasing (async)...")
             await self.resource.disconnect()
             return None
 
-        except Exception as e:
-            logging.error(f"[{self.name}] __release_ failed to release: {e}")
-            # Decide whether to suppress the release exception
-            # Return None to propagate any exception from the with-block (default behavior)
+        except Exception as ex:
+            self.logger.error(f"[{self.name}] __release_ failed to release: {ex}")
+            self.health.report_error(
+                color=HealthColor.RED,
+                error_type="WebSocketContextManagerError",
+                message=f"Exception encounter while releasing in AsyncManagedWebsocketResource: looks like {ex}",
+                component=method_name,
+            )
             return None
