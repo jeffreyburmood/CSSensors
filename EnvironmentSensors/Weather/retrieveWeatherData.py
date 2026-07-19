@@ -170,8 +170,10 @@ async def force_terminate_task_group():
     raise TerminateTaskGroup()
 
 async def main() -> None:
+
+    method_name = main.__name__
+
     try:
-        method_name = main.__name__
 
         health = HealthContext()
 
