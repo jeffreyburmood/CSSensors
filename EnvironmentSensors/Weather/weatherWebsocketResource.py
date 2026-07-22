@@ -3,7 +3,7 @@ import asyncio
 import functools
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Coroutine
 from zoneinfo import ZoneInfo
 
@@ -355,7 +355,40 @@ def subscribed_method(data, health: HealthContext):
             component=method_name,
         )
 
+def is_today_or_yesterday(date_str: str) -> bool:
+    try:
+        input_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return False
+
+    today = datetime.today().date()
+    yesterday = today - timedelta(days=1)
+
+    return input_date in (today, yesterday)
+
 # Alternatively, define a coroutine handler:
+def validate_data(data):
+
+    try:
+        if data is not None:
+
+            mac_addr = os.getenv('CABIN_MAC')
+
+            if data['macAddress'] == mac_addr:
+                local_datetime = convert_utc_to_timezone(data['date'], data['tz'])
+                parsed_date = datetime.strptime(local_datetime, '%Y-%m-%d')
+                parsed_day = parsed_date.strftime("%Y-%m-%d")
+                return is_today_or_yesterday(parsed_day)
+
+            else:
+                return False
+
+        else:
+            return False
+
+    except Exception as ex:
+        return False
+
 async def data_coroutine(data, health: HealthContext):
     """ process the data received by adding it to the database """
 
@@ -363,9 +396,10 @@ async def data_coroutine(data, health: HealthContext):
 
     try:
         logger.debug(f"Data received async: {data}")
-        await process_weather_data(data)
-        await process_interior_data(data)
-        await process_basement_data(data)
+        if validate_data(data):
+            await process_weather_data(data)
+            await process_interior_data(data)
+            await process_basement_data(data)
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')

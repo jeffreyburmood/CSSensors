@@ -9,7 +9,7 @@ anyio==4.12.1
 attrs==25.4.0
 bidict==0.23.1
 brotlicffi==1.0.9.2
-certifi==2026.1.4
+certifi~=2026.1.4
 cffi==2.0.0
 charset-normalizer==3.4.4
 click==8.2.1
@@ -67,3 +67,5 @@ wsproto==1.2.0
 yarl==1.22.0
 
 nats-py~=2.14.0
+sqlalchemy~=2.0.51
+apscheduler~=3.11.1
