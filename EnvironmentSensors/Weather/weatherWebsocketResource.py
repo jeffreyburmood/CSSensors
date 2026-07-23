@@ -369,6 +369,8 @@ def is_today_or_yesterday(date_str: str) -> bool:
 # Alternatively, define a coroutine handler:
 def validate_data(data):
 
+    method_name = validate_data.__name__
+
     try:
         if data is not None:
 
@@ -387,6 +389,7 @@ def validate_data(data):
             return False
 
     except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
         return False
 
 async def data_coroutine(data, health: HealthContext):
@@ -400,6 +403,14 @@ async def data_coroutine(data, health: HealthContext):
             await process_weather_data(data)
             await process_interior_data(data)
             await process_basement_data(data)
+
+        else:
+            health.report_error(
+                color=HealthColor.YELLOW,
+                error_type="WebSocketInvalidData",
+                message=f"The websocket provided invalid weather data, the data looks like {data}",
+                component=method_name,
+            )
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
