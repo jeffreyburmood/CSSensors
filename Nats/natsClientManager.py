@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from typing import Callable, Optional
+
 import nats
 from nats.aio.client import Client as NATSClient
 from nats.aio.subscription import Subscription

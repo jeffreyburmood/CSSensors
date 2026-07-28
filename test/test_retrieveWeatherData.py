@@ -41,7 +41,13 @@ async def main() -> None:
         """
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            print(f'local date time = {local_datetime}')
+            print(f'local date time = {local_datetime}, type is {type(local_datetime)}')
+            parsed_date = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
+            print(f'parsed_date = {parsed_date}, type is {type(parsed_date)}')
+            #parsed_day = parsed_date.strftime("%Y-%m-%d")
+            parsed_day = datetime.strptime(local_datetime, "%Y-%m-%d %H:%M:%S").date()
+            print(f'parsed_day = {parsed_day}, type is {type(parsed_day)}')
+
         else:
             pass
 

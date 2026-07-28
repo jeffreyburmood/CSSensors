@@ -3,7 +3,7 @@ import asyncio
 import functools
 import logging
 import os
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta, date
 from typing import Any, Coroutine
 from zoneinfo import ZoneInfo
 
@@ -355,16 +355,19 @@ def subscribed_method(data, health: HealthContext):
             component=method_name,
         )
 
-def is_today_or_yesterday(date_str: str) -> bool:
+def is_today_or_yesterday(input_date: date) -> bool:
     try:
-        input_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        today = datetime.today().date()
+        yesterday = today - timedelta(days=1)
+
+        return input_date in (today, yesterday)
+
     except (ValueError, TypeError):
         return False
 
-    today = datetime.today().date()
-    yesterday = today - timedelta(days=1)
+    except Exception as ex:
+        return False
 
-    return input_date in (today, yesterday)
 
 # Alternatively, define a coroutine handler:
 def validate_data(data):
@@ -378,14 +381,14 @@ def validate_data(data):
 
             if data['macAddress'] == mac_addr:
                 local_datetime = convert_utc_to_timezone(data['date'], data['tz'])
-                parsed_date = datetime.strptime(local_datetime, '%Y-%m-%d')
-                parsed_day = parsed_date.strftime("%Y-%m-%d")
+                parsed_day = datetime.strptime(local_datetime, "%Y-%m-%d %H:%M:%S").date()
                 return is_today_or_yesterday(parsed_day)
 
             else:
                 return False
 
         else:
+            logger.debug(f'input data is None looks like {data}')
             return False
 
     except Exception as ex:

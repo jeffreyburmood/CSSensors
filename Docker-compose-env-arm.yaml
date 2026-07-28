@@ -13,7 +13,7 @@ services:
     container_name: weatherdata
     environment:
       - NEO4J_DATA_API_URL=http://neo4j-env-dataserver:8000
-      - LOG_LEVEL=DEBUG
+      - LOG_LEVEL=INFO
     networks:
       - cabin-network
     depends_on:
@@ -28,7 +28,7 @@ services:
       - "8000:8000"
     environment:
       - NEO4J_ENV_CONNECTION_STR=bolt://neo4j-db:7687
-      - LOG_LEVEL=DEBUG
+      - LOG_LEVEL=INFO
     networks:
       - cabin-network
     depends_on:
@@ -39,13 +39,13 @@ services:
     container_name: neo4j-db
     restart: always
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "7475:7474"
+      - "7688:7687"
     environment:
       - NEO4J_AUTH=none
     volumes:
       # - /mnt/neo4j/environment/data:/data
-      - /Users/jeffrey/SynologyDrive/database/neo4j-test/data:/data
+      - /Users/jeffrey/SynologyDrive/database/neo4j-test2/data:/data
     networks:
       - cabin-network
 
