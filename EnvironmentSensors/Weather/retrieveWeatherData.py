@@ -41,7 +41,7 @@ async def handle_start_msg(msg, health: HealthContext):
             color=HealthColor.RED,
             error_type="HandleMsgError",
             message=f"Exception encounter while handling start msg: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
 
 async def handle_stop_msg(msg, health: HealthContext):
@@ -64,7 +64,7 @@ async def handle_stop_msg(msg, health: HealthContext):
             color=HealthColor.RED,
             error_type="HandleMsgError",
             message=f"Exception encounter while handling stop msg: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
 
 async def handle_terminate_msg(msg, health: HealthContext):
@@ -85,7 +85,7 @@ async def handle_terminate_msg(msg, health: HealthContext):
             color=HealthColor.RED,
             error_type="HandleMsgError",
             message=f"Exception encounter while handling terminate msg: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
 
 
@@ -95,7 +95,7 @@ async def on_error(e, health: HealthContext):
         color=HealthColor.RED,
         error_type="NATSClientError",
         message=f"Failed to establish NATS client: {e}",
-        component=method_name,
+        component=method_name, subsystem="env",
     )
     logger.error(f"Application received the following NATS error: {e}")
 

@@ -29,4 +29,5 @@ COPY ./utilities ./utilities/
 COPY ./.env .env
 
 # start the unicorn API server
+# --log-level <str> - Set the log level. Options: 'critical', 'error', 'warning', 'info', 'debug', 'trace'. Default: 'info'.
 CMD ["fastapi", "run", "SensorDataMgmt/DataServer/neo4jdata_api.py", "--port", "8000"]

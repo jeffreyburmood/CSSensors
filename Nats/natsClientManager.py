@@ -3,6 +3,7 @@ import logging
 from typing import Callable, Optional
 
 import nats
+import nats.extra
 from nats.aio.client import Client as NATSClient
 from nats.aio.subscription import Subscription
 from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
@@ -185,4 +186,53 @@ class NATSClientManager:
         except Exception as e:
             logger.error(f"Error during NATS disconnect: {e}")
             raise
+
+    async def request_many(
+        self,
+        subject: str,
+        message: bytes | str,
+        stall_wait: float = 0.25,
+        max_wait: float = 5.0,
+    ) -> list:
+        """
+        Send a NATS request and collect multiple responses until no new response
+        arrives within the stall_wait window or max_wait is exceeded.
+
+        :param subject: The subject to send the request to.
+        :param message: The request payload. If str, it will be encoded to bytes.
+        :param stall_wait: Seconds to wait after the last received response before
+                           stopping collection. Defaults to 0.25 seconds.
+        :param max_wait: Maximum total seconds to wait for responses. Defaults to 5 seconds.
+        :return: List of received NATS messages. Returns an empty list if no responses arrive.
+        """
+        if not self._is_connected or self._nc is None:
+            logger.error("Cannot send request: not connected to NATS server")
+            raise ConnectionClosedError
+
+        if isinstance(message, str):
+            message = message.encode()
+
+        responses = []
+
+        try:
+            reply_generator = await nats.extra.request_many(
+                self._nc,
+                subject,
+                message,
+                stall_wait=stall_wait,
+                max_wait=max_wait,
+            )
+
+            async for response in reply_generator:
+                responses.append(response)
+
+            logger.debug(
+                f"request_many on subject '{subject}' collected {len(responses)} response(s). "
+                f"Termination reason: {reply_generator.termination_reason}"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to complete request_many on subject '{subject}': {e}")
+
+        return responses
 

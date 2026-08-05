@@ -34,6 +34,7 @@ class HealthEvent:
     error_type: str
     message: str
     component: str
+    subsystem: str
 
 
 @dataclass
@@ -50,6 +51,7 @@ class HealthContext:
         error_type: str,
         message: str,
         component: str,
+        subsystem: str,
     ):
         if color == HealthColor.RED or (
             color == HealthColor.YELLOW and self.color == HealthColor.GREEN
@@ -63,6 +65,7 @@ class HealthContext:
                 error_type=error_type,
                 message=message,
                 component=component,
+                subsystem=subsystem,
             )
         )
 
@@ -79,6 +82,7 @@ class HealthContext:
                     "error_type": e.error_type,
                     "message": e.message,
                     "component": e.component,
+                    "subsystem": e.subsystem,
                 }
                 for e in self.events
             ],
