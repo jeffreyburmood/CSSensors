@@ -1,23 +1,27 @@
 """ this file contains a class for handling core system messages such as start, stop, and terminate. """
+import asyncio
 
-from utilities.healthStatus import HealthContext
+from utilities.healthStatus import HealthContext, HealthColor
 from utilities.logger import Logger
 
 class CoreMessages:
     
-    def __init__(self):
-        self.logger = Logger()
-        
+    def __init__(self, start_event, stop_event, nats_shutdown_event):
+        self.logger = Logger.get_logger()
+        self.start_event = start_event
+        self.stop_event = stop_event
+        self.nats_shutdown_event = nats_shutdown_event
+
     async def handle_start_msg(self, msg, health: HealthContext):
 
         method_name = self.handle_start_msg.__name__
 
         try:
 
-            self.self.logger.info(f"Received message on subject: {msg.subject}, Starting WebSocket processing.")
-            if not start_event.is_set():
-                start_event.set()
-                stop_event.clear()
+            self.logger.info(f"Received message on subject: {msg.subject}, Starting WebSocket processing.")
+            if not self.start_event.is_set():
+                self.start_event.set()
+                self.stop_event.clear()
                 await asyncio.sleep(1)
             else:
                 self.logger.info(f'Received {msg.subject} but websocket processing already started')
@@ -38,9 +42,9 @@ class CoreMessages:
         try:
 
             self.logger.info(f"Received message on subject: {msg.subject}, shutting down websocket connection.")
-            if not stop_event.is_set():
-                stop_event.set() # this flag being set will cause the websocket processing task to shut down the websocket connection
-                start_event.clear()
+            if not self.stop_event.is_set():
+                self.stop_event.set() # this flag being set will cause the websocket processing task to shut down the websocket connection
+                self.start_event.clear()
                 await asyncio.sleep(1)
             else:
                 self.logger.info(f'Received {msg.subject} but websocket processing already stopped')
@@ -61,9 +65,9 @@ class CoreMessages:
         try:
 
             self.logger.info(f"Received message on subject: {msg.subject}, Shutting down application.")
-            stop_event.set()
-            start_event.clear()
-            nats_shutdown_event.set()
+            self.stop_event.set()
+            self.start_event.clear()
+            self.nats_shutdown_event.set()
             await asyncio.sleep(1)
 
         except Exception as ex:
