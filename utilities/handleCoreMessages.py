@@ -79,3 +79,12 @@ class CoreMessages:
                 component=method_name, subsystem="env",
             )
 
+    async def on_error(self, e, health: HealthContext):
+        method_name = self.on_error.__name__
+        health.report_error(
+            color=HealthColor.RED,
+            error_type="NATSClientError",
+            message=f"Failed to establish NATS client: {e}",
+            component=method_name, subsystem="env",
+        )
+        self.logger.error(f"Application received the following NATS error: {e}")

@@ -5,6 +5,7 @@ import functools
 from datetime import datetime
 
 from Nats.natsClientManager import NATSClientManager
+from utilities.handleCoreMessages import CoreMessages
 from utilities.healthStatus import HealthContext
 from utilities.logger import Logger
 
@@ -39,14 +40,17 @@ async def process_messages(health: HealthContext):
 
     try:
 
+        # set up core messages
+        coreMessages = CoreMessages(start_event, stop_event, nats_shutdown_event)
+
         # set up nats servers and connect to the nats cluster
         servers = ['nats://nats-server-3:4222', 'nats://nats-server-4:4222']
 
         # bind a health parameter to the callback functions so they can handle health context correctly
-        bound_handle_start_msg = functools.partial(handle_start_msg, health=health)
-        bound_handle_stop_msg = functools.partial(handle_stop_msg, health=health)
-        bound_handle_terminate_msg = functools.partial(handle_terminate_msg, health=health)
-        bound_on_error = functools.partial(on_error, health=health)
+        bound_handle_start_msg = functools.partial(coreMessages.handle_start_msg, health=health)
+        bound_handle_stop_msg = functools.partial(coreMessages.handle_stop_msg, health=health)
+        bound_handle_terminate_msg = functools.partial(coreMessages.handle_terminate_msg, health=health)
+        bound_on_error = functools.partial(coreMessages.on_error, health=health)
         sub_start = {'subject': 'cmd.env.weather.start', 'callback': bound_handle_start_msg}
         sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': bound_handle_stop_msg}
         sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': bound_handle_terminate_msg}
