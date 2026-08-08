@@ -4,6 +4,8 @@ import asyncio
 import functools
 from datetime import datetime
 
+from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
+
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
 from utilities.healthStatus import HealthContext
@@ -11,28 +13,44 @@ from utilities.logger import Logger
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
+# Currently using version 3.11.x for aspscheduler, the 4.x versions (master in github) are PRE-RELEASE!
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.interval import IntervalTrigger
+
+logger = Logger.get_logger()
 
 start_event = asyncio.Event()
 stop_event = asyncio.Event()
 termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(logger=logger)
 
-def tick():
-    print("Hello, the time is", datetime.now())
+def healthCheck():
+    print("Performing health check")
 
 async def perform_scheduled_tasks(health):
+    """ RUnState = starting, started, stopping, stopped """
 
     # engine = create_async_engine(
     #     "postgresql+asyncpg://postgres:secret@localhost/testdb"
     # )
     # data_store = SQLAlchemyDataStore(engine)
 
-    scheduler.add_job(tick, 'interval', seconds=5)
-    scheduler.start()
+    scheduler.add_job(healthCheck, 'interval', seconds=300, id='healthcheck')
+
+    try:
+        while not termination_event.is_set():
+            await start_event.wait()
+            if scheduler.state != STATE_RUNNING:
+                if scheduler.state == STATE_PAUSED:
+                    scheduler.resume()
+                else:
+                    scheduler.start()
+            while not termination_event.is_set() and not stop_event.is_set():
+                await asyncio.sleep(5)  # handling the data events via the websocket performed in the resource object
+    finally:
+        await asyncio.sleep(1)
 
 async def process_messages(health: HealthContext):
 
@@ -133,7 +151,6 @@ async def main() -> None:
         logger.info("Application shutdown complete.")
 
 if __name__ == "__main__":
-    logger = Logger.get_logger()
     try:
         asyncio.run(main())
 
