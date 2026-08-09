@@ -18,7 +18,7 @@ class CoreMessages:
 
         try:
 
-            self.logger.info(f"Received message on subject: {msg.subject}, Starting WebSocket processing.")
+            self.logger.info(f"Received message on subject: {msg.subject}, Starting processing.")
             if not self.start_event.is_set():
                 self.start_event.set()
                 self.stop_event.clear()
@@ -41,7 +41,7 @@ class CoreMessages:
 
         try:
 
-            self.logger.info(f"Received message on subject: {msg.subject}, shutting down websocket connection.")
+            self.logger.info(f"Received message on subject: {msg.subject}, shutting down connection.")
             if not self.stop_event.is_set():
                 self.stop_event.set() # this flag being set will cause the websocket processing task to shut down the websocket connection
                 self.start_event.clear()

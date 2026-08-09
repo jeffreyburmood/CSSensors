@@ -1,0 +1,25 @@
+
+# this docker compose file contains the instructions to launch and orchestrate the following containers:
+# - neo4j database for environment data
+# - neo4j dataserver for environment data
+# - weather data collection application
+
+name: cabinadm
+
+services:
+  admin:
+    # cabindock/healthcheck:latest-amd
+    image: cabindock/admin:latest-arm
+    container_name: admin
+    environment:
+      - NEO4J_DATA_API_URL=http://neo4j-adm-dataserver:8000
+      - LOG_LEVEL=INFO
+    networks:
+      - cabin-network
+    # depends_on:
+    #   - neo4j-db
+    #   - neo4j-adm-dataserver
+
+networks:
+  cabin-network:
+    external: true

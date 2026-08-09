@@ -4,7 +4,7 @@ import asyncio
 import functools
 from datetime import datetime
 
-from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
+from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED, STATE_STOPPED
 
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
@@ -26,7 +26,7 @@ termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
 scheduler = AsyncIOScheduler(logger=logger)
 
-def healthCheck():
+def health_check():
     print("Performing health check")
 
 async def perform_scheduled_tasks(health):
@@ -37,18 +37,23 @@ async def perform_scheduled_tasks(health):
     # )
     # data_store = SQLAlchemyDataStore(engine)
 
-    scheduler.add_job(healthCheck, 'interval', seconds=300, id='healthcheck')
+    scheduler.add_job(health_check, 'interval', seconds=300, id='healthcheck')
 
     try:
         while not termination_event.is_set():
-            await start_event.wait()
-            if scheduler.state != STATE_RUNNING:
-                if scheduler.state == STATE_PAUSED:
-                    scheduler.resume()
-                else:
-                    scheduler.start()
-            while not termination_event.is_set() and not stop_event.is_set():
-                await asyncio.sleep(5)  # handling the data events via the websocket performed in the resource object
+            if start_event.is_set():
+                if scheduler.state != STATE_RUNNING:
+                    if scheduler.state != STATE_PAUSED:
+                        scheduler.start()
+                    else:
+                        scheduler.resume()
+            else:
+                if stop_event.is_set():
+                    if scheduler.state == STATE_RUNNING:
+                        scheduler.pause()
+
+            await asyncio.sleep(5)  # handling the data events via the websocket performed in the resource object
+
     finally:
         await asyncio.sleep(1)
 
@@ -69,9 +74,9 @@ async def process_messages(health: HealthContext):
         bound_handle_stop_msg = functools.partial(coreMessages.handle_stop_msg, health=health)
         bound_handle_terminate_msg = functools.partial(coreMessages.handle_terminate_msg, health=health)
         bound_on_error = functools.partial(coreMessages.on_error, health=health)
-        sub_start = {'subject': 'cmd.env.weather.start', 'callback': bound_handle_start_msg}
-        sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': bound_handle_stop_msg}
-        sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': bound_handle_terminate_msg}
+        sub_start = {'subject': 'cmd.adm.health.start', 'callback': bound_handle_start_msg}
+        sub_stop = {'subject': 'cmd.adm.health.stop', 'callback': bound_handle_stop_msg}
+        sub_terminate = {'subject': 'cmd.adm.health.terminate', 'callback': bound_handle_terminate_msg}
         subscriptions = [sub_start, sub_stop, sub_terminate]
 
         nc = NATSClientManager(
@@ -120,7 +125,7 @@ async def main() -> None:
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(perform_scheduled_tasks(health))
-            #tg.create_task(process_messages(health))
+            tg.create_task(process_messages(health))
             await termination_event.wait()
             tg.create_task(force_terminate_task_group())
 
