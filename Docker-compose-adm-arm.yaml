@@ -1,10 +1,10 @@
 
 # this docker compose file contains the instructions to launch and orchestrate the following containers:
-# - neo4j database for environment data
-# - neo4j dataserver for environment data
-# - weather data collection application
+# - neo4j database for administration data
+# - neo4j dataserver for administration data
+# - administration application
 
-name: cabinadm
+name: cabinadmin
 
 services:
   admin:

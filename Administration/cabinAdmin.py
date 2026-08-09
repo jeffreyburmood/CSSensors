@@ -27,7 +27,7 @@ nats_shutdown_event = asyncio.Event()
 scheduler = AsyncIOScheduler(logger=logger)
 
 def health_check():
-    print("Performing health check")
+    logger.info("Performing health check")
 
 async def perform_scheduled_tasks(health):
     """ RUnState = starting, started, stopping, stopped """
@@ -85,6 +85,7 @@ async def process_messages(health: HealthContext):
             error_cb=bound_on_error,
         )
 
+        logger.info('Connecting client to nats server .....')
         await nc.connect()
 
         # don't do anymore in this task until a terminate message is received and the shutdown event flag is set

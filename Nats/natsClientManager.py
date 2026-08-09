@@ -3,7 +3,7 @@ import logging
 from typing import Callable, Optional
 
 import nats
-import nats.extra
+from nats.extra import request_many
 from nats.aio.client import Client as NATSClient
 from nats.aio.subscription import Subscription
 from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
