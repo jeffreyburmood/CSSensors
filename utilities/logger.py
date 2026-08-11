@@ -4,6 +4,31 @@ import logging
 import os
 from dotenv import load_dotenv
 
+# Source - https://stackoverflow.com/a/47104004
+# Posted by Wyrmwood, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-08-11, License - CC BY-SA 4.0
+
+import datetime
+import pytz
+
+class Formatter(logging.Formatter):
+    """override logging.Formatter to use an aware datetime object"""
+    def converter(self, timestamp):
+        dt = datetime.datetime.fromtimestamp(timestamp)
+        tzinfo = pytz.timezone('America/Denver')
+        return tzinfo.localize(dt)
+
+    def formatTime(self, record, datefmt=None):
+        dt = self.converter(record.created)
+        if datefmt:
+            s = dt.strftime(datefmt)
+        else:
+            try:
+                s = dt.isoformat(timespec='milliseconds')
+            except TypeError:
+                s = dt.isoformat()
+        return s
+
 class Logger:
     _logger = None
 
@@ -27,7 +52,7 @@ class Logger:
             # file_handler.setLevel(logging.DEBUG)  # set the logging level at the handler level
 
             # create the formatter (same for both handlers in this example
-            formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s:%(lineno)d %(message)s")
+            formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s:%(lineno)d %(message)s", datefmt='%Y-%m-%d %H:%M:%S')
 
             # add formatter to handlers
             console_handler.setFormatter(formatter)

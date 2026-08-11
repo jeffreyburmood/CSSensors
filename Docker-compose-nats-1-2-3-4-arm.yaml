@@ -30,6 +30,34 @@ services:
     networks:
       - cabin-network
 
+  nats-server-3:
+    image: nats:2.12.8-alpine
+    container_name: nats-server-3
+    restart: unless-stopped
+    volumes:
+      - ./Nats/nats-server-3-arm.conf:/etc/nats/nats-server-3-arm.conf:ro
+    command: ["-c", "/etc/nats/nats-server-3-arm.conf"]
+    ports:
+      - "4224:4222"
+      - "8224:8222"
+      - "6224:6222"
+    networks:
+      - cabin-network
+
+  nats-server-4:
+    image: nats:2.12.8-alpine
+    container_name: nats-server-4
+    restart: unless-stopped
+    volumes:
+      - ./Nats/nats-server-4-arm.conf:/etc/nats/nats-server-4-arm.conf:ro
+    command: ["-c", "/etc/nats/nats-server-4-arm.conf"]
+    ports:
+      - "4225:4222"
+      - "8225:8222"
+      - "6225:6222"
+    networks:
+      - cabin-network
+
 networks:
   cabin-network:
     external: true
