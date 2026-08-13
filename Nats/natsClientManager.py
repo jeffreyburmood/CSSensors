@@ -18,45 +18,19 @@ class NATSClientManager:
     Supports publishing and subscribing to messages with custom callbacks per subscription.
     """
 
-    def __init__(
-        self,
-        servers: list[str],
-        subscriptions: list[dict[str, Callable]] = None,
-        max_reconnect_attempts: int = -1,
-        reconnect_time_wait: int = 2,
-        connect_timeout: int = 10,
-        ping_interval: int = 20,
-        max_outstanding_pings: int = 3,
-        error_cb: Optional[Callable] = None,
-    ):
+    def __init__(self):
         """
         Initialize the NATS client manager.
 
-        :param servers: List of NATS server URLs (e.g., ["nats://localhost:4222", "nats://localhost:4223"])
-        :param subscriptions: List of dicts with keys:
-                                - "subject": str - the subject to subscribe to
-                                - "callback": Callable - the async callback function to handle messages
-                                - "queue_group": str (optional) - queue group name for load balancing
-        :param max_reconnect_attempts: Number of reconnect attempts. -1 for unlimited.
-        :param reconnect_time_wait: Seconds to wait between reconnect attempts.
-        :param connect_timeout: Seconds to wait for initial connection.
-        :param ping_interval: Seconds between server pings to check connectivity.
-        :param max_outstanding_pings: Max unanswered pings before connection is considered lost.
-        :param error_cb: Optional custom async error callback function for the caller to handle errors.
-
-        Recommendation: For applications that need to subscribe to subjects with a queue group
-        (e.g., load balancing across multiple instances of the same application), pass the
-        "queue_group" key in the subscriptions list. For applications that do not need load
-        balancing, omit the "queue_group" key.
         """
-        self._servers = servers
-        self._subscriptions_config = subscriptions or []
-        self._max_reconnect_attempts = max_reconnect_attempts
-        self._reconnect_time_wait = reconnect_time_wait
-        self._connect_timeout = connect_timeout
-        self._ping_interval = ping_interval
-        self._max_outstanding_pings = max_outstanding_pings
-        self._custom_error_cb = error_cb
+        self._servers = []
+        self._subscriptions_config = []
+        self._max_reconnect_attempts = -1
+        self._reconnect_time_wait = 2
+        self._connect_timeout = 10
+        self._ping_interval = 20
+        self._max_outstanding_pings = 3
+        self._custom_error_cb = None
 
         self._nc: Optional[NATSClient] = None
         self._subscriptions: list[Subscription] = []
@@ -83,12 +57,49 @@ class NATSClientManager:
         self._is_connected = False
         logger.info("NATS connection closed")
 
-    async def connect(self):
+    async def connect(
+            self,
+            servers: list[str],
+            subscriptions: list[dict[str, Callable]] = None,
+            max_reconnect_attempts: int = -1,
+            reconnect_time_wait: int = 2,
+            connect_timeout: int = 10,
+            ping_interval: int = 20,
+            max_outstanding_pings: int = 3,
+            error_cb: Optional[Callable] = None,
+    ):
         """
         Establish a connection to the NATS server(s) and set up subscriptions.
+
+        :param servers: List of NATS server URLs (e.g., ["nats://localhost:4222", "nats://localhost:4223"])
+        :param subscriptions: List of dicts with keys:
+                                - "subject": str - the subject to subscribe to
+                                - "callback": Callable - the async callback function to handle messages
+                                - "queue_group": str (optional) - queue group name for load balancing
+        :param max_reconnect_attempts: Number of reconnect attempts. -1 for unlimited.
+        :param reconnect_time_wait: Seconds to wait between reconnect attempts.
+        :param connect_timeout: Seconds to wait for initial connection.
+        :param ping_interval: Seconds between server pings to check connectivity.
+        :param max_outstanding_pings: Max unanswered pings before connection is considered lost.
+        :param error_cb: Optional custom async error callback function for the caller to handle errors.
+
+        Recommendation: For applications that need to subscribe to subjects with a queue group
+        (e.g., load balancing across multiple instances of the same application), pass the
+        "queue_group" key in the subscriptions list. For applications that do not need load
+        balancing, omit the "queue_group" key.
+
         """
         try:
             logger.info(f"Connecting to NATS servers: {self._servers}")
+            self._servers = servers
+            self._subscriptions_config = subscriptions
+            self._max_reconnect_attempts = max_reconnect_attempts
+            self._reconnect_time_wait = reconnect_time_wait
+            self._connect_timeout = connect_timeout
+            self._ping_interval = ping_interval
+            self._max_outstanding_pings = max_outstanding_pings
+            self._custom_error_cb = error_cb
+
             self._nc = await nats.connect(
                 servers=self._servers,
                 error_cb=self._error_cb,

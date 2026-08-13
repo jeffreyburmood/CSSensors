@@ -79,14 +79,14 @@ async def process_messages(health: HealthContext):
         sub_terminate = {'subject': 'cmd.adm.health.terminate', 'callback': bound_handle_terminate_msg}
         subscriptions = [sub_start, sub_stop, sub_terminate]
 
-        nc = NATSClientManager(
+        nc = NATSClientManager()
+
+        logger.info('Connecting client to nats server .....')
+        await nc.connect(
             servers=servers,
             subscriptions=subscriptions,
             error_cb=bound_on_error,
         )
-
-        logger.info('Connecting client to nats server .....')
-        await nc.connect()
 
         # don't do anymore in this task until a terminate message is received and the shutdown event flag is set
         await nats_shutdown_event.wait()
