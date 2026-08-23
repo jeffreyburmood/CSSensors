@@ -1,24 +1,19 @@
 """ This file contains the class and associated methods for managing the weather data websocket in a Context Manager """
 import asyncio
 import functools
-import logging
 import os
+import statistics
+from collections import defaultdict
 from datetime import datetime, timezone, timedelta, date
-from typing import Any, Coroutine
 from zoneinfo import ZoneInfo
-
-from httpx import AsyncClient, HTTPStatusError
-
-from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
 
 from aioambient import Websocket
 from dotenv import load_dotenv
+from httpx import AsyncClient, HTTPStatusError
 
+from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
 from utilities.healthStatus import HealthContext, HealthColor
 from utilities.logger import Logger
-
-import statistics
-from collections import defaultdict
 
 # persistent state for accumulating temperature data
 _weather_accumulator = defaultdict(list)
@@ -50,10 +45,10 @@ def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
         return dt_target.strftime("%Y-%m-%d %H:%M:%S")
 
     except Exception as ex:
-        logger.error(f'Exception encountered in {method_name} while setting up the Consumer, looks like {ex}')
-        raise
+        logger.error(f'Exception encountered in {method_name} while converting timezone, looks like {ex}')
 
-async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
+
+async def add_weather_data_to_database(new_weather_data: WeatherData, health: HealthContext) -> None:
     """ the coroutine makes the actual fastapi call to add the new weather data to the db"""
     method_name = add_weather_data_to_database.__name__
 
@@ -67,11 +62,24 @@ async def add_weather_data_to_database(new_weather_data: WeatherData) -> None:
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"HTTP Exception encountered from data server: looks like {http_error}",
+            component=method_name, subsystem="env",
+        )
+
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while adding exterior weather data to database: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
 
-async def add_interior_data_to_database(new_interior_data: InteriorData) -> None:
+
+async def add_interior_data_to_database(new_interior_data: InteriorData, health: HealthContext) -> None:
     """ the coroutine makes the actual fastapi call to add the new interior data to the db"""
     method_name = add_interior_data_to_database.__name__
 
@@ -85,11 +93,24 @@ async def add_interior_data_to_database(new_interior_data: InteriorData) -> None
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"HTTP Exception encountered from data server: looks like {http_error}",
+            component=method_name, subsystem="env",
+        )
+
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while adding interior data to database: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
 
-async def add_basement_data_to_database(new_basement_data: BasementData) -> None:
+
+async def add_basement_data_to_database(new_basement_data: BasementData, health: HealthContext) -> None:
     """ the coroutine makes the actual fastapi call to add the new basement data to the db"""
     method_name = add_basement_data_to_database.__name__
 
@@ -103,14 +124,28 @@ async def add_basement_data_to_database(new_basement_data: BasementData) -> None
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"HTTP Exception encountered from data server: looks like {http_error}",
+            component=method_name, subsystem="env",
+        )
+
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while adding basement data to database: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
 
-async def process_weather_data(current_data):
+
+async def process_weather_data(current_data, health: HealthContext):
     """
     Takes the current real time weather data and extracts the relevant data and stores it in the database.
     Accumulates temperature data and reports the median temperature once per hour.
+    :param health: class for reporting health data
     :param current_data: Dictionary of retrieved weather station data
     """
 
@@ -169,7 +204,7 @@ async def process_weather_data(current_data):
                     weather_data = WeatherData(**data)
                     logger.debug(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
 
-                    await add_weather_data_to_database(weather_data)
+                    await add_weather_data_to_database(weather_data, health)
 
             _last_processed_hour = hour_key
 
@@ -178,12 +213,19 @@ async def process_weather_data(current_data):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while processing exterior weather data: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
 
-async def process_interior_data(current_data):
+
+async def process_interior_data(current_data, health: HealthContext):
     """
     Takes the current real time cabin interior data and extracts the relevant data and stores it in the database.
     Accumulates temperature data and reports the median temperature once per hour.
+    :param health: class for reporting health data
     :param current_data: Dictionary of retrieved weather station data
     """
 
@@ -236,7 +278,7 @@ async def process_interior_data(current_data):
                     interior_data = InteriorData(**data)
                     logger.debug(f'Interior Data object (median temp for hour {_last_interior_processed_hour[1]:02d}:00= {median_tempf})')
 
-                    await add_interior_data_to_database(interior_data)
+                    await add_interior_data_to_database(interior_data, health)
 
             _last_interior_processed_hour = hour_key
 
@@ -245,12 +287,19 @@ async def process_interior_data(current_data):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while processing interior data: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
 
-async def process_basement_data(current_data):
+
+async def process_basement_data(current_data, health: HealthContext):
     """
     Takes the current real time cabin basement data and extracts the relevant data and stores it in the database.
     Accumulates temperature data and reports the median temperature once per hour.
+    :param health: class for health reporting data
     :param current_data: Dictionary of retrieved weather station data
     """
 
@@ -303,7 +352,7 @@ async def process_basement_data(current_data):
                     basement_data = BasementData(**data)
                     logger.debug(f'BasementData object (median temp for hour {_last_basement_processed_hour[1]:02d}:00= {median_tempf})')
 
-                    await add_basement_data_to_database(basement_data)
+                    await add_basement_data_to_database(basement_data, health)
 
             _last_basement_processed_hour = hour_key
 
@@ -312,7 +361,12 @@ async def process_basement_data(current_data):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
-        raise
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while processing basement data: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
 
 
 # Define a method that should be fired when the websocket client
@@ -329,12 +383,11 @@ def connect_method(health: HealthContext):
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
         health.report_error(
-            color=HealthColor.YELLOW,
+            color=HealthColor.RED,
             error_type="WebSocketContextManagerError",
             message=f"Exception encountered while trying to connect to websocket: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
-        raise
 
 # Define a method that should be run upon subscribing to the Ambient
 # Weather cloud:
@@ -349,28 +402,43 @@ def subscribed_method(data, health: HealthContext):
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
         health.report_error(
-            color=HealthColor.YELLOW,
+            color=HealthColor.RED,
             error_type="WebSocketContextManagerError",
             message=f"Exception encountered while subscribing to websocket data: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
 
-def is_today_or_yesterday(input_date: date) -> bool:
+def is_today_or_yesterday(input_date: date, health: HealthContext) -> bool:
+
+    method_name = is_today_or_yesterday.__name__
+
     try:
         today = datetime.today().date()
         yesterday = today - timedelta(days=1)
 
         return input_date in (today, yesterday)
 
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as ex:
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="ValueOrTypeError",
+            message=f"Exception encountered while testing for today or yesterday: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
         return False
 
     except Exception as ex:
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="GeneralError",
+            message=f"Exception encountered while testing for today or yesterday: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
         return False
 
 
 # Alternatively, define a coroutine handler:
-def validate_data(data):
+def validate_data(data, health: HealthContext):
 
     method_name = validate_data.__name__
 
@@ -382,7 +450,7 @@ def validate_data(data):
             if data['macAddress'] == mac_addr:
                 local_datetime = convert_utc_to_timezone(data['date'], data['tz'])
                 parsed_day = datetime.strptime(local_datetime, "%Y-%m-%d %H:%M:%S").date()
-                return is_today_or_yesterday(parsed_day)
+                return is_today_or_yesterday(parsed_day, health)
 
             else:
                 return False
@@ -393,6 +461,12 @@ def validate_data(data):
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        health.report_error(
+            color=HealthColor.RED,
+            error_type="WeatherDateError",
+            message=f"Exception encountered while validating weather data: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
         return False
 
 async def data_coroutine(data, health: HealthContext):
@@ -402,17 +476,17 @@ async def data_coroutine(data, health: HealthContext):
 
     try:
         logger.debug(f"Data received async: {data}")
-        if validate_data(data):
-            await process_weather_data(data)
-            await process_interior_data(data)
-            await process_basement_data(data)
+        if validate_data(data, health):
+            await process_weather_data(data, health)
+            await process_interior_data(data, health)
+            await process_basement_data(data, health)
 
         else:
             health.report_error(
                 color=HealthColor.YELLOW,
                 error_type="WebSocketInvalidData",
                 message=f"The websocket provided invalid weather data, the data looks like {data}",
-                component=method_name,
+                component=method_name, subsystem="env",
             )
 
     except Exception as ex:
@@ -421,12 +495,12 @@ async def data_coroutine(data, health: HealthContext):
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
             message=f"Exception encountered while processing websocket data: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
 
 # Define a method that should be run when the websocket client
 # disconnects:
-async def disconnect_coroutine(data, health: HealthContext):
+async def disconnect_coroutine(health: HealthContext):
     """Wait for 3 seconds, then print a simple "goodbye" message."""
 
     method_name = disconnect_coroutine.__name__
@@ -441,7 +515,7 @@ async def disconnect_coroutine(data, health: HealthContext):
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
             message=f"Exception encountered while disconnecting websocket client: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
 
 
@@ -474,15 +548,12 @@ def configure_websocket(health: HealthContext) -> Websocket:
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
             message=f"Exception encountered while configuring websocket: looks like {ex}",
-            component=method_name,
+            component=method_name, subsystem="env",
         )
 
 class AsyncManagedWebsocketResource:
     """ this class defines a websocket resource to be managed within an async Context Manager """
-    def __init__(self, name, health: HealthContext,
-                 simulate_acquire_fail: bool = False,
-                 simulate_release_fail: bool = False,
-                 suppress_release_exception: bool = False):
+    def __init__(self, name, health: HealthContext):
         """
         name: identifier for the managed resource (stored and used by enter/exit).
         simulate_acquire_fail: if True, acquisition will raise.
@@ -514,7 +585,7 @@ class AsyncManagedWebsocketResource:
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
                 message=f"Exception encounter while entering AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name,
+                component=method_name, subsystem="env",
             )
             return None
 
@@ -535,7 +606,7 @@ class AsyncManagedWebsocketResource:
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
                 message=f"Exception encounter while exiting AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name,
+                component=method_name, subsystem="env",
             )
             return False
 
@@ -555,7 +626,7 @@ class AsyncManagedWebsocketResource:
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
                 message=f"Exception encounter while acquiring in AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name,
+                component=method_name, subsystem="env",
             )
             return None
 
@@ -574,6 +645,6 @@ class AsyncManagedWebsocketResource:
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
                 message=f"Exception encounter while releasing in AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name,
+                component=method_name, subsystem="env",
             )
             return None

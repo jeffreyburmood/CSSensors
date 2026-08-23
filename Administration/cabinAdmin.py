@@ -19,6 +19,7 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.interval import IntervalTrigger
 
 logger = Logger.get_logger()
+nc = NATSClientManager()
 
 start_event = asyncio.Event()
 stop_event = asyncio.Event()
@@ -27,7 +28,7 @@ nats_shutdown_event = asyncio.Event()
 scheduler = AsyncIOScheduler(logger=logger)
 
 def health_check():
-    logger.info("Performing health check")
+    logger.info("Performing another health check")
 
 async def perform_scheduled_tasks(health):
     """ RUnState = starting, started, stopping, stopped """
@@ -78,8 +79,6 @@ async def process_messages(health: HealthContext):
         sub_stop = {'subject': 'cmd.adm.health.stop', 'callback': bound_handle_stop_msg}
         sub_terminate = {'subject': 'cmd.adm.health.terminate', 'callback': bound_handle_terminate_msg}
         subscriptions = [sub_start, sub_stop, sub_terminate]
-
-        nc = NATSClientManager()
 
         logger.info('Connecting client to nats server .....')
         await nc.connect(

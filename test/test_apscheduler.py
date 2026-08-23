@@ -8,7 +8,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from utilities.logger import Logger
 
 logger = Logger.get_logger()
-logger.setLevel(logging.INFO)
 
 scheduler = AsyncIOScheduler(logger=logger)
 
