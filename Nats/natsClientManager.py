@@ -242,8 +242,8 @@ class NATSClientManager:
                 f"Termination reason: {reply_generator.termination_reason}"
             )
 
-        except Exception as e:
-            logger.error(f"Failed to complete request_many on subject '{subject}': {e}")
+        except Exception as ex:
+            logger.error(f"Failed to complete request_many on subject '{subject}': {ex}")
 
         return responses
 

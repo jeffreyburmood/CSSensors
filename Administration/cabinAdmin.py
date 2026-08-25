@@ -27,8 +27,19 @@ termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
 scheduler = AsyncIOScheduler(logger=logger)
 
-def health_check():
-    logger.info("Performing another health check")
+async def health_check():
+    method_name = health_check.__name__
+
+    try:
+        logger.info("Performing another health check")
+        responses = await nc.request_many("rst.sys.sys.health", "perform health check")
+
+        for response in responses:
+            logger.info(f"Health check response = {response.decode()}")
+
+    except Exception as ex:
+        logger.error(f"Exception encountered in {method_name} while performing periodic health checks, looks like {ex}")
+
 
 async def perform_scheduled_tasks(health):
     """ RUnState = starting, started, stopping, stopped """
