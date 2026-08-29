@@ -3,6 +3,7 @@ import functools
 
 from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
 from Nats.natsClientManager import NATSClientManager
+from utilities.handleCoreMessages import CoreMessages
 from utilities.healthStatus import HealthContext, HealthColor
 from utilities.logger import Logger
 
@@ -10,6 +11,8 @@ start_event = asyncio.Event()
 stop_event = asyncio.Event()
 termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
+
+nc = NATSClientManager()
 
 async def process_websocket(health: HealthContext):
     try:
@@ -88,6 +91,26 @@ async def handle_terminate_msg(msg, health: HealthContext):
             component=method_name, subsystem="env",
         )
 
+async def handle_healthcheck_request(msg, health: HealthContext):
+
+    method_name = handle_healthcheck_request.__name__
+
+    try:
+
+        logger.info(f"Received message on subject: {msg.subject}, processing health data.")
+        # collect all the health check data as a byte array for the request response
+        health_response = health.publish_and_reset()
+        await nc.publish(msg.reply, health_response)
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
+        health.report_error(
+            color=HealthColor.RED,
+            error_type="HandleMsgError",
+            message=f"Exception encounter while handling healthcheck request: looks like {ex}",
+            component=method_name, subsystem="env",
+        )
+
 
 async def on_error(e, health: HealthContext):
     method_name = on_error.__name__
@@ -113,23 +136,35 @@ async def process_messages(health: HealthContext):
         # set up nats servers and connect to the nats cluster
         servers = ['nats://nats-server-1:4222', 'nats://nats-server-2:4222']
 
+        # set up core messages
+        coreMessages = CoreMessages(start_event, stop_event, nats_shutdown_event)
+
+        # bind a health parameter to the callback functions so they can handle health context correctly
+        bound_handle_start_msg = functools.partial(coreMessages.handle_start_msg, health=health)
+        bound_handle_stop_msg = functools.partial(coreMessages.handle_stop_msg, health=health)
+        bound_handle_terminate_msg = functools.partial(coreMessages.handle_terminate_msg, health=health)
+        bound_handle_healthcheck_request = functools.partial(handle_healthcheck_request, health=health)
+        bound_on_error = functools.partial(coreMessages.on_error, health=health)
+
         # set up subscribers
         # sub_start = await nc.subscribe('cmd.env.weather.start', cb=handle_start_msg)
         # sub_stop = await nc.subscribe('cmd.env.weather.stop', cb=handle_stop_msg)
         # sub_terminate = await nc.subscribe('cmd.env.weather.terminate', cb=handle_terminate_msg)
 
         # bind a health parameter to the callback functions so they can handle health context correctly
-        bound_handle_start_msg = functools.partial(handle_start_msg, health=health)
-        bound_handle_stop_msg = functools.partial(handle_stop_msg, health=health)
-        bound_handle_terminate_msg = functools.partial(handle_terminate_msg, health=health)
-        bound_on_error = functools.partial(on_error, health=health)
+        # bound_handle_start_msg = functools.partial(handle_start_msg, health=health)
+        # bound_handle_stop_msg = functools.partial(handle_stop_msg, health=health)
+        # bound_handle_terminate_msg = functools.partial(handle_terminate_msg, health=health)
+        # bound_on_error = functools.partial(on_error, health=health)
         sub_start = {'subject': 'cmd.env.weather.start', 'callback': bound_handle_start_msg}
         sub_stop = {'subject': 'cmd.env.weather.stop', 'callback': bound_handle_stop_msg}
         sub_terminate = {'subject': 'cmd.env.weather.terminate', 'callback': bound_handle_terminate_msg}
-        subscriptions = [sub_start, sub_stop, sub_terminate]
+        sub_healthcheck = {'subject': 'rst.sys.sys.healthcheck', 'callback': bound_handle_healthcheck_request}
+        subscriptions = [sub_start, sub_stop, sub_terminate, sub_healthcheck]
 
-        nc = NATSClientManager()
+        # nc = NATSClientManager()  moved to top of the file
 
+        logger.info('Connecting client to nats server .....')
         await nc.connect(
             servers=servers,
             subscriptions=subscriptions,

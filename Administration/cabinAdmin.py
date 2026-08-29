@@ -32,7 +32,7 @@ async def health_check():
 
     try:
         logger.info("Performing another health check")
-        responses = await nc.request_many("rst.sys.sys.health", "perform health check")
+        responses = await nc.request_many("rst.sys.sys.healthcheck", "perform health check")
 
         for response in responses:
             logger.info(f"Health check response = {response.decode()}")
@@ -75,11 +75,11 @@ async def process_messages(health: HealthContext):
 
     try:
 
-        # set up core messages
-        coreMessages = CoreMessages(start_event, stop_event, nats_shutdown_event)
-
         # set up nats servers and connect to the nats cluster
         servers = ['nats://nats-server-3:4222', 'nats://nats-server-4:4222']
+
+        # set up core messages
+        coreMessages = CoreMessages(start_event, stop_event, nats_shutdown_event)
 
         # bind a health parameter to the callback functions so they can handle health context correctly
         bound_handle_start_msg = functools.partial(coreMessages.handle_start_msg, health=health)
