@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 import nats
 from nats.extra import request_many
-from nats.aio.client import Client as NATSClient
+from nats.aio.client import Client
 from nats.aio.subscription import Subscription
 from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
 
@@ -32,7 +32,7 @@ class NATSClientManager:
         self._max_outstanding_pings = 3
         self._custom_error_cb = None
 
-        self._nc: Optional[NATSClient] = None
+        self._nc: Optional[Client] = None
         self._subscriptions: list[Subscription] = []
         self._is_connected = False
 
@@ -225,6 +225,7 @@ class NATSClientManager:
 
         responses = []
 
+        logger.info(f'making call to request_many(), the subject is {subject}')
         try:
             reply_generator = await nats.extra.request_many(
                 self._nc,
@@ -234,10 +235,11 @@ class NATSClientManager:
                 max_wait=max_wait,
             )
 
+            logger.info(f'completed call to request_many()')
             async for response in reply_generator:
                 responses.append(response)
 
-            logger.debug(
+            logger.info(
                 f"request_many on subject '{subject}' collected {len(responses)} response(s). "
                 f"Termination reason: {reply_generator.termination_reason}"
             )

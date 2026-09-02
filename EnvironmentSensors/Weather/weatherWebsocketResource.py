@@ -534,7 +534,9 @@ def configure_websocket(health: HealthContext) -> Websocket:
         bound_handle_data_coroutine = functools.partial(data_coroutine, health=health)
         bound_handle_disconnect_coroutine = functools.partial(disconnect_coroutine, health=health)
 
-        websocket = Websocket(APP_KEY, API_KEY, logger=logger)
+        # pass local logger to the websocket
+        # websocket = Websocket(APP_KEY, API_KEY, logger=logger)
+        websocket = Websocket(APP_KEY, API_KEY)
         websocket.on_connect(bound_handle_connect_method)
         websocket.on_subscribed(bound_handle_subscribed_method)
         websocket.async_on_data(bound_handle_data_coroutine)
