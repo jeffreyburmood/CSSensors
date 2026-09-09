@@ -9,7 +9,7 @@ from nats.aio.subscription import Subscription
 from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 class NATSClientManager:
@@ -227,7 +227,7 @@ class NATSClientManager:
 
         logger.info(f'making call to request_many(), the subject is {subject}')
         try:
-            reply_generator = await nats.extra.request_many(
+            reply_generator = await request_many(
                 self._nc,
                 subject,
                 message,
@@ -235,9 +235,8 @@ class NATSClientManager:
                 max_wait=max_wait,
             )
 
-            logger.info(f'completed call to request_many()')
-            async for response in reply_generator:
-                responses.append(response)
+            logger.info(f'completed call to request_many() in natsClient')
+            responses = [message.data async for message in reply_generator]
 
             logger.info(
                 f"request_many on subject '{subject}' collected {len(responses)} response(s). "

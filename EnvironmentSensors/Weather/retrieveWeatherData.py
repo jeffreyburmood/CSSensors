@@ -13,6 +13,7 @@ termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
 
 nc = NATSClientManager()
+logger = Logger.get_logger()
 
 async def process_websocket(health: HealthContext):
     try:
@@ -99,7 +100,7 @@ async def handle_healthcheck_request(msg, health: HealthContext):
 
         logger.info(f"Received message on subject: {msg.subject}, processing health data.")
         # collect all the health check data as a byte array for the request response
-        health_response = health.publish_and_reset()
+        health_response = health.publish_and_reset(component='env')
         await nc.publish(msg.reply, health_response)
 
     except Exception as ex:
@@ -241,7 +242,6 @@ async def main() -> None:
         logger.info("Application shutdown complete.")
 
 if __name__ == "__main__":
-    logger = Logger.get_logger()
     try:
         asyncio.run(main())
 

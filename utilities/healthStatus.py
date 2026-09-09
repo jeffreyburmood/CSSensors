@@ -69,8 +69,9 @@ class HealthContext:
             )
         )
 
-    def publish_and_reset(self) -> bytearray:
+    def publish_and_reset(self, component: str) -> bytearray:
         payload = {
+            "component": component,
             "status": self.color.value,
             "last_reset": self.last_reset,
             "reported_at": datetime.now(timezone.utc).isoformat(),

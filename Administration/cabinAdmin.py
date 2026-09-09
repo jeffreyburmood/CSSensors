@@ -3,8 +3,10 @@
 import asyncio
 import functools
 from datetime import datetime
+from http.client import responses
 
 from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED, STATE_STOPPED
+from nats.extra import request_many
 
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
@@ -17,6 +19,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.interval import IntervalTrigger
+
+from nats.client import connect
 
 logger = Logger.get_logger()
 nc = NATSClientManager()
@@ -32,9 +36,14 @@ async def health_check():
 
     try:
         logger.info("Performing another health check")
-        responses = await nc.request_many("rst.sys.sys.healthcheck", "perform health check")
 
-        for response in responses:
+        nats_client = await connect('nats://nats-server-4:4222')
+        health_responses = await request_many(nats_client, 'rst.sys.sys.healthcheck', b'go')
+        # health_responses = await nc.request_many("rst.sys.sys.healthcheck", "perform health check")
+
+        received = [message.data async for message in health_responses]
+
+        for response in received:
             logger.info(f"Health check response = {response.decode()}")
 
     except Exception as ex:

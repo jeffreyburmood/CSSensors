@@ -23,8 +23,8 @@ _last_processed_hour = None
 _last_interior_processed_hour = None
 _last_basement_processed_hour = None
 
-logger = Logger.get_logger()
 load_dotenv()
+logger = Logger.get_logger()
 
 def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     """
@@ -158,7 +158,7 @@ async def process_weather_data(current_data, health: HealthContext):
 
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            logger.debug(f'local date time = {local_datetime}')
+            logger.info(f'local date time = {local_datetime}')
 
             parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
             hour_key = (parsed_datetime.date(), parsed_datetime.hour)
@@ -202,7 +202,7 @@ async def process_weather_data(current_data, health: HealthContext):
                         'rainfallhrly': last_reading['rainfallhrly'],
                     }
                     weather_data = WeatherData(**data)
-                    logger.debug(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.info(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_weather_data_to_database(weather_data, health)
 
@@ -238,7 +238,7 @@ async def process_interior_data(current_data, health: HealthContext):
 
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            logger.debug(f'local date time = {local_datetime}')
+            logger.info(f'local date time = {local_datetime}')
 
             parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
             hour_key = (parsed_datetime.date(), parsed_datetime.hour)
@@ -276,7 +276,7 @@ async def process_interior_data(current_data, health: HealthContext):
                         'humidity': last_reading['humidity'],
                     }
                     interior_data = InteriorData(**data)
-                    logger.debug(f'Interior Data object (median temp for hour {_last_interior_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.info(f'Interior Data object (median temp for hour {_last_interior_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_interior_data_to_database(interior_data, health)
 
@@ -312,7 +312,7 @@ async def process_basement_data(current_data, health: HealthContext):
 
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            logger.debug(f'local date time = {local_datetime}')
+            logger.info(f'local date time = {local_datetime}')
 
             parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
             hour_key = (parsed_datetime.date(), parsed_datetime.hour)
@@ -350,7 +350,7 @@ async def process_basement_data(current_data, health: HealthContext):
                         'humidity': last_reading['humidity'],
                     }
                     basement_data = BasementData(**data)
-                    logger.debug(f'BasementData object (median temp for hour {_last_basement_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.info(f'BasementData object (median temp for hour {_last_basement_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_basement_data_to_database(basement_data, health)
 
@@ -397,7 +397,7 @@ def subscribed_method(data, health: HealthContext):
     method_name = subscribed_method.__name__
 
     try:
-        logger.debug(f"Subscription data received in {method_name}: {data}")
+        logger.info(f"Subscription data received in {method_name}: {data}")
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
@@ -445,9 +445,10 @@ def validate_data(data, health: HealthContext):
     try:
         if data is not None:
 
-            mac_addr = os.getenv('CABIN_MAC')
+            cabin_mac_addr = os.getenv('CABIN_MAC')
+            gilbert_mac_addr = os.getenv('GILBERT_MAC')
 
-            if data['macAddress'] == mac_addr:
+            if data['macAddress'] == cabin_mac_addr or data['macAddress'] == gilbert_mac_addr:
                 local_datetime = convert_utc_to_timezone(data['date'], data['tz'])
                 parsed_day = datetime.strptime(local_datetime, "%Y-%m-%d %H:%M:%S").date()
                 return is_today_or_yesterday(parsed_day, health)
@@ -475,7 +476,7 @@ async def data_coroutine(data, health: HealthContext):
     method_name = data_coroutine.__name__
 
     try:
-        logger.debug(f"Data received async: {data}")
+        logger.info(f"Data received async: {data}")
         if validate_data(data, health):
             await process_weather_data(data, health)
             await process_interior_data(data, health)
@@ -568,7 +569,7 @@ class AsyncManagedWebsocketResource:
         # self.suppress_release_exception = suppress_release_exception
         # resource will be set in __aenter__ if acquisition succeeds
         self.resource = None
-        self.logger = Logger.get_logger()
+        self.logger = logger
         self.health = health
 
     async def __aenter__(self):

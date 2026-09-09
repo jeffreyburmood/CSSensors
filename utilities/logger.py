@@ -36,7 +36,7 @@ class Logger:
     def get_logger():
         if Logger._logger is None:
             load_dotenv()
-            log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+            log_level = os.getenv('LOG_LEVEL', 'DEBUG').upper()
 
             # setup logger and provide name
             Logger._logger = logging.getLogger("appLogger")
