@@ -5,7 +5,7 @@ from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebs
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
 from utilities.healthStatus import HealthContext, HealthColor
-from utilities.logger import Logger
+from utilities.logger import logger
 
 start_event = asyncio.Event()
 stop_event = asyncio.Event()
@@ -13,7 +13,6 @@ termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
 
 nc = NATSClientManager()
-logger = Logger.get_logger()
 
 async def process_websocket(health: HealthContext):
     try:

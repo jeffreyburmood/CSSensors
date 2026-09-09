@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 
 from SensorDataMgmt.DataServer.neo4jConnector import Neo4j
 from SensorDataMgmt.environmentDataModel import WeatherData
-from utilities.logger import Logger
+from utilities.logger import logger
 
 app = FastAPI()
 

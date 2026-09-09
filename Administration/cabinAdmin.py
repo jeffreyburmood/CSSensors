@@ -11,7 +11,7 @@ from nats.extra import request_many
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
 from utilities.healthStatus import HealthContext
-from utilities.logger import Logger
+from utilities.logger import logger
 
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -22,7 +22,6 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from nats.client import connect
 
-logger = Logger.get_logger()
 nc = NATSClientManager()
 
 start_event = asyncio.Event()

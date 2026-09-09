@@ -2,12 +2,12 @@
 import asyncio
 
 from utilities.healthStatus import HealthContext, HealthColor
-from utilities.logger import Logger
+from utilities.logger import logger
 
 class CoreMessages:
     
     def __init__(self, start_event, stop_event, nats_shutdown_event):
-        self.logger = Logger.get_logger()
+        self.logger = logger.get_logger()
         self.start_event = start_event
         self.stop_event = stop_event
         self.nats_shutdown_event = nats_shutdown_event

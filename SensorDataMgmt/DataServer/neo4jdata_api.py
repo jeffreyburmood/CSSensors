@@ -1,20 +1,15 @@
 """ this file contains the code used to store and retrieve data from the Neo4j database """
-import csv
-import uuid
-from datetime import datetime
-from typing import List
 
 import neo4j.exceptions
 from fastapi import FastAPI, HTTPException
 
 from SensorDataMgmt.DataServer.neo4jConnector import Neo4jEnv
-from SensorDataMgmt.neo4jDataModel import DBCounters
 from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
-from utilities.logger import Logger
+from SensorDataMgmt.neo4jDataModel import DBCounters
+from utilities.logger import logger
 
 app = FastAPI()
 
-logger = Logger.get_logger()
 
 # trading-bot data server routes
 # these routes are used to access data withing the neo4j database

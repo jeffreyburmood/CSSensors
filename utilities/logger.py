@@ -3,16 +3,11 @@
 import logging
 import os
 from dotenv import load_dotenv
+from zoneinfo import ZoneInfo
+from datetime import datetime
 
-# Source - https://stackoverflow.com/a/47104004
-# Posted by Wyrmwood, modified by community. See post 'Timeline' for change history
-# Retrieved 2026-08-11, License - CC BY-SA 4.0
-
-import datetime
-import pytz
-
+"""
 class Formatter(logging.Formatter):
-    """override logging.Formatter to use an aware datetime object"""
     def converter(self, timestamp):
         dt = datetime.datetime.fromtimestamp(timestamp)
         tzinfo = pytz.timezone('America/Denver')
@@ -63,3 +58,42 @@ class Logger:
             # Logger._logger.addHandler(file_handler)
 
         return Logger._logger
+"""
+
+class MountainTimeFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        mt_tz = ZoneInfo("America/Denver")
+        ct = datetime.fromtimestamp(record.created, tz=mt_tz)
+        if datefmt:
+            return ct.strftime(datefmt)
+        return ct.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+    def format(self, record):
+        record.asctime = self.formatTime(record)
+        return super().format(record)
+
+
+def get_logger() -> logging.Logger:
+    logger = logging.getLogger("cssLogger")
+
+    if logger.handlers:
+        return logger
+
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    logger.setLevel(getattr(logging, log_level, logging.INFO))
+
+    handler = logging.StreamHandler()
+    handler.setLevel(getattr(logging, log_level, logging.INFO))
+
+    formatter = MountainTimeFormatter(
+        fmt="%(asctime)s | %(levelname)-8s | %(module)s.%(funcName)s:%(lineno)d | %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.propagate = False
+
+    return logger
+
+
+# Singleton logger instance shared across all modules
+logger = get_logger()

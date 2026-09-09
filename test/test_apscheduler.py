@@ -5,7 +5,7 @@ from datetime import datetime
 
 # Currently using version 3.11.x for aspscheduler, the 4.x versions (master in github) are PRE-RELEASE!
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from utilities.logger import Logger
+from utilities.logger import logger
 
 logger = Logger.get_logger()
 

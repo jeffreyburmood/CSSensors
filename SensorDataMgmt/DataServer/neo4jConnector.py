@@ -5,7 +5,7 @@ from neo4j import AsyncGraphDatabase
 import os
 
 from dotenv import load_dotenv
-from utilities.logger import Logger
+from utilities.logger import logger
 
 class Neo4j:
     """ Base class for the Neo4j database connectors """
@@ -15,7 +15,7 @@ class Neo4j:
         self.auth = (self.username, self.password)
         # connection string examples: "neo4j://localhost", "neo4j+s://xxx.databases.neo4j.io"
         self.connection_str = connectionStr  # this is the docker network IP address for this container
-        self.logger = Logger.get_logger()
+        self.logger = logger.get_logger()
 
     async def get_driver(self, driver):
 

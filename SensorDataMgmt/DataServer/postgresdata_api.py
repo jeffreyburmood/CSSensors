@@ -7,7 +7,7 @@ from psycopg.rows import class_row
 
 from data_server.connectors import PostgresDB
 from data_server.data_model import DBConnectionInfo, VectorNorm
-from utilities.logger import Logger
+from utilities.logger import logger
 
 logger = Logger.get_logger()
 

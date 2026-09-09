@@ -13,7 +13,7 @@ from httpx import AsyncClient, HTTPStatusError
 
 from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
 from utilities.healthStatus import HealthContext, HealthColor
-from utilities.logger import Logger
+from utilities.logger import logger
 
 # persistent state for accumulating temperature data
 _weather_accumulator = defaultdict(list)
@@ -24,7 +24,6 @@ _last_interior_processed_hour = None
 _last_basement_processed_hour = None
 
 load_dotenv()
-logger = Logger.get_logger()
 
 def convert_utc_to_timezone(utc_date: str, tz: str) -> str:
     """

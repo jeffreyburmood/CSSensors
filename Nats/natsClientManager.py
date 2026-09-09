@@ -7,10 +7,7 @@ from nats.extra import request_many
 from nats.aio.client import Client
 from nats.aio.subscription import Subscription
 from nats.errors import ConnectionClosedError, TimeoutError, NoServersError
-
-
-logger = logging.getLogger()
-
+from utilities.logger import logger
 
 class NATSClientManager:
     """
