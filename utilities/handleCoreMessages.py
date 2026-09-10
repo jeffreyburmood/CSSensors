@@ -7,7 +7,7 @@ from utilities.logger import logger
 class CoreMessages:
     
     def __init__(self, start_event, stop_event, nats_shutdown_event):
-        self.logger = logger.get_logger()
+        self.logger = logger
         self.start_event = start_event
         self.stop_event = stop_event
         self.nats_shutdown_event = nats_shutdown_event
@@ -18,13 +18,13 @@ class CoreMessages:
 
         try:
 
-            self.logger.debug(f"Received message on subject: {msg.subject}.")
+            self.logger.info(f"Received message on subject: {msg.subject}.")
             if not self.start_event.is_set():
                 self.start_event.set()
                 self.stop_event.clear()
                 await asyncio.sleep(1)
             else:
-                self.logger.debug(f'Received {msg.subject} but application is already started')
+                self.logger.warning(f'Received {msg.subject} but application is already started')
 
         except Exception as ex:
             self.logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
@@ -41,13 +41,13 @@ class CoreMessages:
 
         try:
 
-            self.logger.debug(f"Received message on subject: {msg.subject}.")
+            self.logger.info(f"Received message on subject: {msg.subject}.")
             if not self.stop_event.is_set():
                 self.stop_event.set()
                 self.start_event.clear()
                 await asyncio.sleep(1)
             else:
-                self.logger.debug(f'Received {msg.subject} but application is already stopped')
+                self.logger.warning(f'Received {msg.subject} but application is already stopped')
 
         except Exception as ex:
             self.logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
@@ -64,7 +64,7 @@ class CoreMessages:
 
         try:
 
-            self.logger.debug(f"Received message on subject: {msg.subject}, Shutting down application.")
+            self.logger.info(f"Received message on subject: {msg.subject}, Shutting down application.")
             self.stop_event.set()
             self.start_event.clear()
             self.nats_shutdown_event.set()

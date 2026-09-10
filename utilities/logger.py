@@ -59,6 +59,14 @@ class Logger:
 
         return Logger._logger
 """
+"""
+Below is a list of standard logging levels in Python (from lowest to highest):
+DEBUG: It is used for detailed diagnostic information during development.
+INFO: This level is used to indicate that things are progressing as expected
+WARNING:  This message is used to show that something unexpected happened, but not necessarily the failure of the program
+ERROR: The message indicates a serious problem that has affected the functionality
+CRITICAL: The message describes a very serious error or one that has caused the program or system to stop running.
+"""
 
 class MountainTimeFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):

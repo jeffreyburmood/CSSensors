@@ -43,7 +43,7 @@ async def health_check():
         received = [message.data async for message in health_responses]
 
         for response in received:
-            logger.info(f"Health check response = {response.decode()}")
+            logger.debug(f"Health check response = {response.decode()}")
 
     except Exception as ex:
         logger.error(f"Exception encountered in {method_name} while performing periodic health checks, looks like {ex}")

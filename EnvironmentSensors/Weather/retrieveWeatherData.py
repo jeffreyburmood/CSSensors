@@ -36,7 +36,7 @@ async def handle_start_msg(msg, health: HealthContext):
             stop_event.clear()
             await asyncio.sleep(1)
         else:
-            logger.info(f'Received {msg.subject} but websocket processing already started')
+            logger.warning(f'Received {msg.subject} but websocket processing already started')
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
@@ -59,7 +59,7 @@ async def handle_stop_msg(msg, health: HealthContext):
             start_event.clear()
             await asyncio.sleep(1)
         else:
-            logger.info(f'Received {msg.subject} but websocket processing already stopped')
+            logger.warning(f'Received {msg.subject} but websocket processing already stopped')
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')

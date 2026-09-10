@@ -15,7 +15,7 @@ class Neo4j:
         self.auth = (self.username, self.password)
         # connection string examples: "neo4j://localhost", "neo4j+s://xxx.databases.neo4j.io"
         self.connection_str = connectionStr  # this is the docker network IP address for this container
-        self.logger = logger.get_logger()
+        self.logger = logger
 
     async def get_driver(self, driver):
 

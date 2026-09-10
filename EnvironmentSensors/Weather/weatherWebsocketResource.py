@@ -57,7 +57,7 @@ async def add_weather_data_to_database(new_weather_data: WeatherData, health: He
         async with AsyncClient() as client:
             response = await client.post(db_url+'/add-new-weather-data', json=new_weather_data.model_dump())
             response.raise_for_status()
-            logger.debug(f'request to add new weather data completed successfully!')
+            logger.info(f'request to add new weather data completed successfully!')
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
@@ -88,7 +88,7 @@ async def add_interior_data_to_database(new_interior_data: InteriorData, health:
         async with AsyncClient() as client:
             response = await client.post(db_url+'/add-new-interior-data', json=new_interior_data.model_dump())
             response.raise_for_status()
-            logger.debug(f'request to add new interior data completed successfully!')
+            logger.info(f'request to add new interior data completed successfully!')
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
@@ -119,7 +119,7 @@ async def add_basement_data_to_database(new_basement_data: BasementData, health:
         async with AsyncClient() as client:
             response = await client.post(db_url+'/add-new-basement-data', json=new_basement_data.model_dump())
             response.raise_for_status()
-            logger.debug(f'request to add new basement data completed successfully!')
+            logger.info(f'request to add new basement data completed successfully!')
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
@@ -157,7 +157,7 @@ async def process_weather_data(current_data, health: HealthContext):
 
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            logger.info(f'local date time = {local_datetime}')
+            logger.debug(f'local date time = {local_datetime}')
 
             parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
             hour_key = (parsed_datetime.date(), parsed_datetime.hour)
@@ -201,7 +201,7 @@ async def process_weather_data(current_data, health: HealthContext):
                         'rainfallhrly': last_reading['rainfallhrly'],
                     }
                     weather_data = WeatherData(**data)
-                    logger.info(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.debug(f'Weather Data object (median temp for hour {_last_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_weather_data_to_database(weather_data, health)
 
@@ -237,7 +237,7 @@ async def process_interior_data(current_data, health: HealthContext):
 
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            logger.info(f'local date time = {local_datetime}')
+            logger.debug(f'local date time = {local_datetime}')
 
             parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
             hour_key = (parsed_datetime.date(), parsed_datetime.hour)
@@ -275,7 +275,7 @@ async def process_interior_data(current_data, health: HealthContext):
                         'humidity': last_reading['humidity'],
                     }
                     interior_data = InteriorData(**data)
-                    logger.info(f'Interior Data object (median temp for hour {_last_interior_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.debug(f'Interior Data object (median temp for hour {_last_interior_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_interior_data_to_database(interior_data, health)
 
@@ -311,7 +311,7 @@ async def process_basement_data(current_data, health: HealthContext):
 
         if current_data['macAddress'] == mac_addr:
             local_datetime = convert_utc_to_timezone(current_data['date'], current_data['tz'])
-            logger.info(f'local date time = {local_datetime}')
+            logger.debug(f'local date time = {local_datetime}')
 
             parsed_datetime = datetime.strptime(local_datetime, '%Y-%m-%d %H:%M:%S')
             hour_key = (parsed_datetime.date(), parsed_datetime.hour)
@@ -349,7 +349,7 @@ async def process_basement_data(current_data, health: HealthContext):
                         'humidity': last_reading['humidity'],
                     }
                     basement_data = BasementData(**data)
-                    logger.info(f'BasementData object (median temp for hour {_last_basement_processed_hour[1]:02d}:00= {median_tempf})')
+                    logger.debug(f'BasementData object (median temp for hour {_last_basement_processed_hour[1]:02d}:00= {median_tempf})')
 
                     await add_basement_data_to_database(basement_data, health)
 
@@ -396,7 +396,7 @@ def subscribed_method(data, health: HealthContext):
     method_name = subscribed_method.__name__
 
     try:
-        logger.info(f"Subscription data received in {method_name}: {data}")
+        logger.debug(f"Subscription data received in {method_name}: {data}")
 
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
@@ -456,7 +456,7 @@ def validate_data(data, health: HealthContext):
                 return False
 
         else:
-            logger.debug(f'input data is None looks like {data}')
+            logger.warning(f'input data in {method_name} is None looks like {data}')
             return False
 
     except Exception as ex:
@@ -475,7 +475,7 @@ async def data_coroutine(data, health: HealthContext):
     method_name = data_coroutine.__name__
 
     try:
-        logger.info(f"Data received async: {data}")
+        logger.debug(f"Data received async: {data}")
         if validate_data(data, health):
             await process_weather_data(data, health)
             await process_interior_data(data, health)

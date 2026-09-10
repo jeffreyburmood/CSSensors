@@ -84,7 +84,7 @@ async def add_new_weather_data(new_weather_data: WeatherData) -> None:
     method_name = add_new_weather_data.__name__
 
     try:
-        logger.debug(f'received POST request to the {method_name} route')
+        logger.info(f'received POST request to the {method_name} route')
 
         driver = Neo4jEnv().get_db_driver()
 
@@ -151,7 +151,7 @@ async def add_new_interior_data(new_interior_data: InteriorData) -> None:
     method_name = add_new_interior_data.__name__
 
     try:
-        logger.debug(f'received POST request to the {method_name} route')
+        logger.info(f'received POST request to the {method_name} route')
 
         driver = Neo4jEnv().get_db_driver()
 
@@ -215,7 +215,7 @@ async def add_new_basement_data(new_basement_data: BasementData) -> None:
     method_name = add_new_basement_data.__name__
 
     try:
-        logger.debug(f'received POST request to the {method_name} route')
+        logger.info(f'received POST request to the {method_name} route')
 
         driver = Neo4jEnv().get_db_driver()
 

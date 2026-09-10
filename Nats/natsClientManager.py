@@ -44,7 +44,7 @@ class NATSClientManager:
 
     async def _disconnected_cb(self):
         self._is_connected = False
-        logger.warning("Disconnected from NATS server")
+        logger.info("Disconnected from NATS server")
 
     async def _reconnected_cb(self):
         self._is_connected = True
@@ -169,7 +169,7 @@ class NATSClientManager:
         try:
             await self._nc.publish(subject, message, headers=headers)
             await self._nc.flush()
-            logger.debug(f"Published message to subject '{subject}'")
+            logger.info(f"Published message to subject '{subject}'")
         except Exception as e:
             logger.error(f"Failed to publish message to subject '{subject}': {e}")
             raise
@@ -222,7 +222,6 @@ class NATSClientManager:
 
         responses = []
 
-        logger.info(f'making call to request_many(), the subject is {subject}')
         try:
             reply_generator = await request_many(
                 self._nc,
@@ -235,7 +234,7 @@ class NATSClientManager:
             logger.info(f'completed call to request_many() in natsClient')
             responses = [message.data async for message in reply_generator]
 
-            logger.info(
+            logger.debug(
                 f"request_many on subject '{subject}' collected {len(responses)} response(s). "
                 f"Termination reason: {reply_generator.termination_reason}"
             )
