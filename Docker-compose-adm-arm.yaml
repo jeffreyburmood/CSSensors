@@ -13,7 +13,7 @@ services:
     container_name: admin
     environment:
       - NEO4J_DATA_API_URL=http://neo4j-adm-dataserver:8000
-      - LOG_LEVEL=DEBUG
+      - LOG_LEVEL=INFO
     networks:
       - cabin-network
     # depends_on:
