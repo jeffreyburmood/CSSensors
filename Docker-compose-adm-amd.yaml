@@ -1,0 +1,24 @@
+
+# this docker compose file contains the instructions to launch and orchestrate the following containers:
+# - neo4j database for administration data
+# - neo4j dataserver for administration data
+# - administration application
+
+name: cabinadmin
+
+services:
+  admin:
+    image: cabindock/admin:latest-amd
+    container_name: admin
+    environment:
+      - NEO4J_DATA_API_URL=http://neo4j-adm-dataserver:8000
+      - LOG_LEVEL=WARNING
+    networks:
+      - cabin-network
+    # depends_on:
+    #   - neo4j-db
+    #   - neo4j-adm-dataserver
+
+networks:
+  cabin-network:
+    external: true
