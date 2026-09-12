@@ -94,7 +94,7 @@ def get_logger() -> logging.Logger:
     handler.setLevel(getattr(logging, log_level, logging.INFO))
 
     formatter = MountainTimeFormatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(module)s.%(funcName)s:%(lineno)d | %(message)s"
+        fmt="%(asctime)s | %(levelname)-6s | %(module)s.%(funcName)s:%(lineno)d | %(message)s"
     )
     handler.setFormatter(formatter)
     logger.addHandler(handler)

@@ -27,7 +27,7 @@ class CoreMessages:
                 self.logger.warning(f'Received {msg.subject} but application is already started')
 
         except Exception as ex:
-            self.logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
+            self.logger.error(f'Exception encountered in {method_name} while processing nats subject: {msg.subject}, looks like {ex}')
             health.report_error(
                 color=HealthColor.RED,
                 error_type="HandleMsgError",
@@ -50,7 +50,7 @@ class CoreMessages:
                 self.logger.warning(f'Received {msg.subject} but application is already stopped')
 
         except Exception as ex:
-            self.logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
+            self.logger.error(f'Exception encountered in {method_name} while processing nats subject: {msg.subject}, looks like {ex}')
             health.report_error(
                 color=HealthColor.RED,
                 error_type="HandleMsgError",
@@ -71,7 +71,7 @@ class CoreMessages:
             await asyncio.sleep(1)
 
         except Exception as ex:
-            self.logger.error(f'Exception encountered in {method_name} while processing nats subject, looks like {ex}')
+            self.logger.error(f'Exception encountered in {method_name} while processing nats subject: {msg.subject}, looks like {ex}')
             health.report_error(
                 color=HealthColor.RED,
                 error_type="HandleMsgError",
@@ -87,4 +87,4 @@ class CoreMessages:
             message=f"Failed to establish NATS client: {e}",
             component=method_name, subsystem="env",
         )
-        self.logger.error(f"Application received the following NATS error: {e}")
+        self.logger.error(f"Application received the following NATS error: {e} in {method_name}")

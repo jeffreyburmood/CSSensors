@@ -128,11 +128,6 @@ async def process_messages(health: HealthContext):
 
     try:
 
-        # load_dotenv()
-
-        # nats_server_url = os.getenv('NATS_SERVER')
-        # nc = await nats.connect(nats_server_url)
-
         # set up nats servers and connect to the nats cluster
         servers = ['nats://nats-server-1:4222', 'nats://nats-server-2:4222']
 
@@ -162,8 +157,6 @@ async def process_messages(health: HealthContext):
         sub_healthcheck = {'subject': 'rst.sys.sys.healthcheck', 'callback': bound_handle_healthcheck_request}
         subscriptions = [sub_start, sub_stop, sub_terminate, sub_healthcheck]
 
-        # nc = NATSClientManager()  moved to top of the file
-
         logger.info('Connecting client to nats server .....')
         await nc.connect(
             servers=servers,
@@ -177,21 +170,12 @@ async def process_messages(health: HealthContext):
         # once the terminate message is received, the websocket connection has already been closed so
         # shutdown and clean up the nats client
         logger.info("Shutting down nats client connections...")
-        #for sub in subscriptions:
-        #    await sub.unsubscribe()
-        #await nc.drain()
-        #await nc.close()
         await nc.disconnect()
         logger.info("All nats connections closed.")
 
         termination_event.set()
 
-        # once the nats client is shutdown then cancel out of the task group to end the application
-        # raise asyncio.CancelledError
-
-    # except asyncio.CancelledError:
-    #     raise
-
+    # perform an exception here because we can't connect to the nats servers to report health status
     except Exception as ex:
         logger.error(f'Exception encountered in {method_name}, looks like {ex}')
         raise

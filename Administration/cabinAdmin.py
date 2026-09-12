@@ -47,7 +47,7 @@ async def health_check():
             if health_data["error_count"] == 0:
                 logger.info(f"Health check response - no errors")
             else:
-                logger.info(f"Health check response with errors = {health_data}")
+                logger.warning(f"Health check response with errors = {health_data}")
 
     except Exception as ex:
         logger.error(f"Exception encountered in {method_name} while performing periodic health checks, looks like {ex}")
