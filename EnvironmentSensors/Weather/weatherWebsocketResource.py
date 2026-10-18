@@ -64,8 +64,7 @@ async def add_weather_data_to_database(new_weather_data: WeatherData, health: He
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"HTTP Exception encountered from data server: looks like {http_error}",
-            component=method_name, subsystem="env",
+            message=f"HTTP Exception encountered from data server: looks like {http_error}"
         )
 
     except Exception as ex:
@@ -73,8 +72,7 @@ async def add_weather_data_to_database(new_weather_data: WeatherData, health: He
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while adding exterior weather data to database: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while adding exterior weather data to database: looks like {ex}"
         )
 
 
@@ -95,8 +93,7 @@ async def add_interior_data_to_database(new_interior_data: InteriorData, health:
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"HTTP Exception encountered from data server: looks like {http_error}",
-            component=method_name, subsystem="env",
+            message=f"HTTP Exception encountered from data server: looks like {http_error}"
         )
 
     except Exception as ex:
@@ -104,8 +101,7 @@ async def add_interior_data_to_database(new_interior_data: InteriorData, health:
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while adding interior data to database: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while adding interior data to database: looks like {ex}"
         )
 
 
@@ -126,8 +122,7 @@ async def add_basement_data_to_database(new_basement_data: BasementData, health:
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"HTTP Exception encountered from data server: looks like {http_error}",
-            component=method_name, subsystem="env",
+            message=f"HTTP Exception encountered from data server: looks like {http_error}"
         )
 
     except Exception as ex:
@@ -135,8 +130,7 @@ async def add_basement_data_to_database(new_basement_data: BasementData, health:
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while adding basement data to database: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while adding basement data to database: looks like {ex}"
         )
 
 
@@ -215,8 +209,7 @@ async def process_weather_data(current_data, health: HealthContext):
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while processing exterior weather data: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while processing exterior weather data: looks like {ex}"
         )
 
 
@@ -289,8 +282,7 @@ async def process_interior_data(current_data, health: HealthContext):
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while processing interior data: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while processing interior data: looks like {ex}"
         )
 
 
@@ -363,8 +355,7 @@ async def process_basement_data(current_data, health: HealthContext):
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while processing basement data: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while processing basement data: looks like {ex}"
         )
 
 
@@ -384,8 +375,7 @@ def connect_method(health: HealthContext):
         health.report_error(
             color=HealthColor.RED,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while trying to connect to websocket: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while trying to connect to websocket: looks like {ex}"
         )
 
 # Define a method that should be run upon subscribing to the Ambient
@@ -403,8 +393,7 @@ def subscribed_method(data, health: HealthContext):
         health.report_error(
             color=HealthColor.RED,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while subscribing to websocket data: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while subscribing to websocket data: looks like {ex}"
         )
 
 def is_today_or_yesterday(input_date: date, health: HealthContext) -> bool:
@@ -421,8 +410,7 @@ def is_today_or_yesterday(input_date: date, health: HealthContext) -> bool:
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="ValueOrTypeError",
-            message=f"Exception encountered while testing for today or yesterday: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while testing for today or yesterday: looks like {ex}"
         )
         return False
 
@@ -430,8 +418,7 @@ def is_today_or_yesterday(input_date: date, health: HealthContext) -> bool:
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="GeneralError",
-            message=f"Exception encountered while testing for today or yesterday: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while testing for today or yesterday: looks like {ex}"
         )
         return False
 
@@ -464,8 +451,7 @@ def validate_data(data, health: HealthContext):
         health.report_error(
             color=HealthColor.RED,
             error_type="WeatherDateError",
-            message=f"Exception encountered while validating weather data: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while validating weather data: looks like {ex}"
         )
         return False
 
@@ -485,8 +471,7 @@ async def data_coroutine(data, health: HealthContext):
             health.report_error(
                 color=HealthColor.YELLOW,
                 error_type="WebSocketInvalidData",
-                message=f"The websocket provided invalid weather data, the data looks like {data}",
-                component=method_name, subsystem="env",
+                message=f"The websocket provided invalid weather data, the data looks like {data}"
             )
 
     except Exception as ex:
@@ -494,8 +479,7 @@ async def data_coroutine(data, health: HealthContext):
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while processing websocket data: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while processing websocket data: looks like {ex}"
         )
 
 # Define a method that should be run when the websocket client
@@ -514,8 +498,7 @@ async def disconnect_coroutine(health: HealthContext):
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while disconnecting websocket client: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while disconnecting websocket client: looks like {ex}"
         )
 
 
@@ -549,8 +532,7 @@ def configure_websocket(health: HealthContext) -> Websocket:
         health.report_error(
             color=HealthColor.YELLOW,
             error_type="WebSocketContextManagerError",
-            message=f"Exception encountered while configuring websocket: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encountered while configuring websocket: looks like {ex}"
         )
 
 class AsyncManagedWebsocketResource:
@@ -586,8 +568,7 @@ class AsyncManagedWebsocketResource:
             self.health.report_error(
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
-                message=f"Exception encounter while entering AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name, subsystem="env",
+                message=f"Exception encounter while entering AsyncManagedWebsocketResource: looks like {ex}"
             )
             return None
 
@@ -607,8 +588,7 @@ class AsyncManagedWebsocketResource:
             self.health.report_error(
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
-                message=f"Exception encounter while exiting AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name, subsystem="env",
+                message=f"Exception encounter while exiting AsyncManagedWebsocketResource: looks like {ex}"
             )
             return False
 
@@ -627,8 +607,7 @@ class AsyncManagedWebsocketResource:
             self.health.report_error(
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
-                message=f"Exception encounter while acquiring in AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name, subsystem="env",
+                message=f"Exception encounter while acquiring in AsyncManagedWebsocketResource: looks like {ex}"
             )
             return None
 
@@ -646,7 +625,6 @@ class AsyncManagedWebsocketResource:
             self.health.report_error(
                 color=HealthColor.RED,
                 error_type="WebSocketContextManagerError",
-                message=f"Exception encounter while releasing in AsyncManagedWebsocketResource: looks like {ex}",
-                component=method_name, subsystem="env",
+                message=f"Exception encounter while releasing in AsyncManagedWebsocketResource: looks like {ex}"
             )
             return None

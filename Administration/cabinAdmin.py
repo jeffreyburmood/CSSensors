@@ -138,7 +138,7 @@ async def main() -> None:
 
     try:
 
-        health = HealthContext()
+        health = HealthContext("admin", "healthcheck")
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(perform_scheduled_tasks(health))
