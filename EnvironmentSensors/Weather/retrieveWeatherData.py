@@ -4,7 +4,7 @@ import functools
 from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
-from utilities.healthStatus import HealthContext, HealthColor
+from SensorDataMgmt.adminDataModel import HealthContext, HealthColor
 from utilities.logger import logger
 
 start_event = asyncio.Event()

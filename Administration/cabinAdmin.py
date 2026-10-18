@@ -2,23 +2,17 @@
     CSSensors system """
 import asyncio
 import functools
-from datetime import datetime
-from http.client import responses
 
-from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED, STATE_STOPPED
+from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
 from nats.extra import request_many
 
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
-from utilities.healthStatus import HealthContext
+from SensorDataMgmt.adminDataModel import HealthContext
 from utilities.logger import logger
-
-from sqlalchemy.ext.asyncio import create_async_engine
 
 # Currently using version 3.11.x for aspscheduler, the 4.x versions (master in github) are PRE-RELEASE!
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
-from apscheduler.triggers.interval import IntervalTrigger
 
 from nats.client import connect
 

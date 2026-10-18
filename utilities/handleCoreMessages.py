@@ -1,7 +1,7 @@
 """ this file contains a class for handling core system messages such as start, stop, and terminate. """
 import asyncio
 
-from utilities.healthStatus import HealthContext, HealthColor
+from SensorDataMgmt.adminDataModel import HealthContext, HealthColor
 from utilities.logger import logger
 
 class CoreMessages:

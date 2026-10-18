@@ -9,9 +9,8 @@ import neo4j.exceptions
 from fastapi import FastAPI, HTTPException
 
 from SensorDataMgmt.DataServer.neo4jConnector import Neo4jEnv
-from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
 from SensorDataMgmt.neo4jDataModel import DBCounters
-from utilities.healthStatus import HealthContext
+from SensorDataMgmt.adminDataModel import HealthContext
 from utilities.logger import logger
 
 # set up for the FastAPI server

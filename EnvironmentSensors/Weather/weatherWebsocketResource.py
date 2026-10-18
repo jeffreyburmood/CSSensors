@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from httpx import AsyncClient, HTTPStatusError
 
 from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, BasementData
-from utilities.healthStatus import HealthContext, HealthColor
+from SensorDataMgmt.adminDataModel import HealthContext, HealthColor
 from utilities.logger import logger
 
 # persistent state for accumulating temperature data
