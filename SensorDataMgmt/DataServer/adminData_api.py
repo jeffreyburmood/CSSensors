@@ -65,9 +65,9 @@ def get_session(driver: AsyncDriver) -> AsyncSession:
 # ---------------------------------------------------------------------------
 # WRITE operations — each session.run() is an auto-commit transaction
 # ---------------------------------------------------------------------------
-async def create_health_check_entry(session: AsyncSession, title: str, released: int, tagline: str) -> None:
+async def create_health_check_entry(session: AsyncSession, health_check__data: HealthData) -> None:
     """
-    MERGE avoids duplicate Movie nodes on repeated runs.
+    MERGE avoids duplicate nodes on repeated runs.
     session.run() fires an auto-commit transaction immediately;
     the result must be consumed before the session is reused.
     """
@@ -86,7 +86,7 @@ async def create_health_check_entry(session: AsyncSession, title: str, released:
 
 @app.post("/add-new-health-check-data")
 async def add_new_health_check_data(health_check_data: HealthContext) -> None:
-        """ this method will add new weather data to the neo4j database """
+        """ this method will add new health check data to the admin neo4j database """
 
         method_name = add_new_health_check_data.__name__
 
@@ -97,16 +97,14 @@ async def add_new_health_check_data(health_check_data: HealthContext) -> None:
 
                 # Verify the driver can reach the server before doing any work.
                 await driver.verify_connectivity()
-                print(f"[DRIVER] Connected to Neo4j at {URI}\n")
+                logger.info(f"[DRIVER] Connected to Neo4j at {URI}\n")
 
-                # ── SEED ────────────────────────────────────────────────────────────
-                print("=== Seeding Movies ===")
                 async with get_session(driver) as session:
                 # Each session.run() call is its own auto-commit transaction.
                 # Grouping them inside a single session context means they
                 # share the same underlying network connection for efficiency,
                 # but each query commits independently.
-                   await create_health_check_entry(session, **health_check_data)
+                   await create_health_check_entry(session, health_check_data)
 
         except neo4j.exceptions.ConstraintError as con:
             logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")

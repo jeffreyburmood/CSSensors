@@ -43,8 +43,7 @@ async def handle_start_msg(msg, health: HealthContext):
         health.report_error(
             color=HealthColor.RED,
             error_type="HandleMsgError",
-            message=f"Exception encounter while handling start msg: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encounter while handling start msg: looks like {ex}"
         )
 
 async def handle_stop_msg(msg, health: HealthContext):
@@ -66,8 +65,7 @@ async def handle_stop_msg(msg, health: HealthContext):
         health.report_error(
             color=HealthColor.RED,
             error_type="HandleMsgError",
-            message=f"Exception encounter while handling stop msg: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encounter while handling stop msg: looks like {ex}"
         )
 
 async def handle_terminate_msg(msg, health: HealthContext):
@@ -87,8 +85,7 @@ async def handle_terminate_msg(msg, health: HealthContext):
         health.report_error(
             color=HealthColor.RED,
             error_type="HandleMsgError",
-            message=f"Exception encounter while handling terminate msg: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encounter while handling terminate msg: looks like {ex}"
         )
 
 async def handle_healthcheck_request(msg, health: HealthContext):
@@ -99,7 +96,7 @@ async def handle_healthcheck_request(msg, health: HealthContext):
 
         logger.info(f"Received message on subject: {msg.subject}, processing health data.")
         # collect all the health check data as a byte array for the request response
-        health_response = health.publish_and_reset(component='env')
+        health_response = health.publish_and_reset()
         await nc.publish(msg.reply, health_response)
 
     except Exception as ex:
@@ -107,8 +104,7 @@ async def handle_healthcheck_request(msg, health: HealthContext):
         health.report_error(
             color=HealthColor.RED,
             error_type="HandleMsgError",
-            message=f"Exception encounter while handling healthcheck request: looks like {ex}",
-            component=method_name, subsystem="env",
+            message=f"Exception encounter while handling healthcheck request: looks like {ex}"
         )
 
 
@@ -117,10 +113,9 @@ async def on_error(e, health: HealthContext):
     health.report_error(
         color=HealthColor.RED,
         error_type="NATSClientError",
-        message=f"Failed to establish NATS client: {e}",
-        component=method_name, subsystem="env",
+        message=f"Failed to establish NATS client: {e}"
     )
-    logger.error(f"Application received the following NATS error: {e}")
+    logger.error(f"Application received the following NATS error: {e} reported in {method_name}")
 
 async def process_messages(health: HealthContext):
 
@@ -194,7 +189,7 @@ async def main() -> None:
 
     try:
 
-        health = HealthContext()
+        health = HealthContext(subsystem="environment", component="weather")
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(process_websocket(health))

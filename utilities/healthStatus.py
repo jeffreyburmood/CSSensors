@@ -12,20 +12,20 @@ Cons:
 Requires passing the context object through the call chain, which can feel verbose
 Slightly more upfront design effort
 """
-import asyncio
 import json
-from datetime import datetime, timezone, tzinfo
-from enum import Enum
 from dataclasses import dataclass, field
+from datetime import datetime
+from datetime import timezone
+from enum import Enum
 
 import pytz
+from pydantic import BaseModel
 
 
 class HealthColor(str, Enum):
     GREEN = "green"
     YELLOW = "yellow"
     RED = "red"
-
 
 @dataclass
 class HealthEvent:
@@ -36,22 +36,29 @@ class HealthEvent:
     component: str
     subsystem: str
 
-
-@dataclass
-class HealthContext:
+class HealthData(BaseModel):
+    component: str
+    subsystem: str
     color: HealthColor = HealthColor.GREEN
     events: list[HealthEvent] = field(default_factory=list)
+
+
+@dataclass
+class HealthContext(HealthData):
     last_reset: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+
+    def __init__(self, subsystem, component):
+        super().__init__()
+        self.subsystem = subsystem
+        self.component = component
 
     def report_error(
         self,
         color: HealthColor,
         error_type: str,
         message: str,
-        component: str,
-        subsystem: str,
     ):
         if color == HealthColor.RED or (
             color == HealthColor.YELLOW and self.color == HealthColor.GREEN
@@ -64,14 +71,15 @@ class HealthContext:
                 color=color,
                 error_type=error_type,
                 message=message,
-                component=component,
-                subsystem=subsystem,
+                component=self.component,
+                subsystem=self.subsystem,
             )
         )
 
-    def publish_and_reset(self, component: str) -> bytearray:
+    def publish_and_reset(self) -> bytearray:
         payload = {
-            "component": component,
+            "subsystem": self.subsystem,
+            "component": self.component,
             "status": self.color.value,
             "last_reset": self.last_reset,
             "reported_at": datetime.now(timezone.utc).isoformat(),
@@ -85,7 +93,7 @@ class HealthContext:
                     "component": e.component,
                     "subsystem": e.subsystem,
                 }
-                for e in self.events
+                for e in self.events  # not quite sure what this is doing
             ],
         }
         # convert the payload to a bytearray for the NATS response message
