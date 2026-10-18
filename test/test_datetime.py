@@ -3,7 +3,7 @@ import asyncio
 import time
 from datetime import datetime, date
 
-from SensorDataMgmt.DataServer.neo4jdata_api import add_new_weather_data
+from SensorDataMgmt.DataServer.environmentData_api import add_new_weather_data
 from SensorDataMgmt.environmentDataModel import WeatherData
 
 async def main() -> None:
