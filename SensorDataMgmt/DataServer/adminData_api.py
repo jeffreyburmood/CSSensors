@@ -22,7 +22,7 @@ logger = logger
 # initialize the DB credentials used for all db endpoints
 load_dotenv()
 
-URI      = os.getenv("NEO4J_ADMIN_URI")
+URI      = os.getenv("NEO4J_ADM_CONNECTION_STR")
 AUTH     = (os.getenv("NEO4J_USERNAME"), os.getenv("NEO4J_PASSWORD"))
 DATABASE = os.getenv("NEO4J_ADMIN_DATABASE", "neo4j")
 
@@ -64,24 +64,39 @@ def get_session(driver: AsyncDriver) -> AsyncSession:
 # ---------------------------------------------------------------------------
 # WRITE operations — each session.run() is an auto-commit transaction
 # ---------------------------------------------------------------------------
-async def create_health_check_entry(session: AsyncSession, health_check__data: HealthData) -> None:
+async def create_health_check_entry(session: AsyncSession, health_check_data: HealthContext) -> None:
     """
     MERGE avoids duplicate nodes on repeated runs.
     session.run() fires an auto-commit transaction immediately;
     the result must be consumed before the session is reused.
     """
-    result = await session.run(
-        """
-        MERGE (m:Movie {title: $title})
-        ON CREATE SET m.released = $released, m.tagline = $tagline
-        RETURN m.title AS title
-        """,
-        title=title,
-        released=released,
-        tagline=tagline,
-    )
-    record = await result.single()
-    print(f"[CREATE] Movie: '{record['title']}'")
+
+    method_name = create_health_check_entry.__name__
+
+    try:
+        result = await session.run(
+            """
+            MERGE (s: Subsystem {subsystemname: $subsystemname})
+            MERGE (c: Component {componentname: $componentname})
+            ON MATCH
+                SET c.color = $componentcolor
+            MERGE (s)-[:HAS_COMPONENT]->(c)
+            """,
+            subsystemname=health_check_data.subsystem,
+            componentname=health_check_data.component,
+            componentcolor=health_check_data.color,
+            database_='neo4j',
+        )
+        record = await result.single()
+        logger.info(f"the following health check record was added to the db: {record}")
+
+    except neo4j.exceptions.ConstraintError as con:
+        logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")
+
+    except Exception as ex:
+        logger.error(f"Exception encountered in {method_name} looks like {ex}")
+        raise HTTPException(status_code=404,
+                            detail=f"Error occurred when trying to POST new health check data to the db, looks like {ex}")
 
 @app.post("/add-new-health-check-data")
 async def add_new_health_check_data(health_check_data: HealthContext) -> None:

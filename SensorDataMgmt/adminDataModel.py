@@ -93,7 +93,7 @@ class HealthContext(HealthData):
                     "component": e.component,
                     "subsystem": e.subsystem,
                 }
-                for e in self.events  # not quite sure what this is doing
+                for e in self.events  # looks like this creates a list for the payload dict
             ],
         }
         # convert the payload to a bytearray for the NATS response message
