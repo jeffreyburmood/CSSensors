@@ -87,16 +87,31 @@ async def create_health_check_entry(session: AsyncSession, health_check_data: He
             componentcolor=health_check_data.color,
             database_='neo4j',
         )
-        record = await result.single()
-        logger.info(f"the following health check record was added to the db: {record}")
 
-    except neo4j.exceptions.ConstraintError as con:
-        logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")
+        # check to see if there are any health check events to add to db
+        if len(health_check_data.events) > 0:
+            logger.info(f'there were {len(health_check_data.events)} error events to add to the database for {health_check_data.component}')
+            for e in health_check_data.events:
+                result = session.run(
+                    """
+                    MATCH(c:Component {componentname: $componentname})
+                    CREATE(h: Healthevent {timestamp=$timestamp, color=$color, errortype=$errortype, message=$message})
+                    CREATE (c)-[:HAS_HEALTH_EVENT]->(h)
+                    """,
+                    componentname=health_check_data.component,
+                    timestamp=e.timestamp,
+                    color=e.color,
+                    errortype=e.error_type,
+                    message=e.message,
+                    database_='neo4j',
+                )
+
+    except neo4j.exceptions.SessionError as ses:
+        logger.error(f"********** Session exception encountered in {method_name} looks like {ses}")
 
     except Exception as ex:
         logger.error(f"Exception encountered in {method_name} looks like {ex}")
-        raise HTTPException(status_code=404,
-                            detail=f"Error occurred when trying to POST new health check data to the db, looks like {ex}")
+        raise
 
 @app.post("/add-new-health-check-data")
 async def add_new_health_check_data(health_check_data: HealthContext) -> None:
@@ -118,13 +133,13 @@ async def add_new_health_check_data(health_check_data: HealthContext) -> None:
                 # Grouping them inside a single session context means they
                 # share the same underlying network connection for efficiency,
                 # but each query commits independently.
-                   await create_health_check_entry(session, health_check_data)
+                    await create_health_check_entry(session, health_check_data)
 
-        except neo4j.exceptions.ConstraintError as con:
-            logger.error(f"********** Constraint exception encountered in {method_name} looks like {con}")
+        except neo4j.exceptions.Neo4jError as ses:
+            logger.error(f"********** Neo4j exception encountered in {method_name} looks like {ses}")
 
         except Exception as ex:
             logger.error(f"Exception encountered in {method_name} looks like {ex}")
             raise HTTPException(status_code=404,
-                            detail=f"Error occurred when trying to POST new weather data to the db, looks like {ex}")
+                            detail=f"Error occurred when trying to POST new health check data to the db, looks like {ex}")
 
