@@ -1,0 +1,34 @@
+# Stage 1: builder
+FROM python:3.13-slim-trixie AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Stage 2: runtime
+FROM python:3.13-slim-trixie AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /root/.local /root/.local
+
+ENV PATH=/root/.local/bin:$PATH
+ENV PYTHONPATH=/app
+ENV LOG_LEVEL=INFO
+
+# copy the required files to the container working directory
+COPY ./SensorDataMgmt ./SensorDataMgmt/
+COPY ./utilities ./utilities/
+COPY ./.env .env
+
+# start the unicorn API server
+# --log-level <str> - Set the log level. Options: 'critical', 'error', 'warning', 'info', 'debug', 'trace'. Default: 'info'.
+CMD ["fastapi", "run", "SensorDataMgmt/DataServer/adminData_api.py", "--port", "8000"]
