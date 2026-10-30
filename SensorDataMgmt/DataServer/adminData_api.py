@@ -23,7 +23,7 @@ logger = logger
 load_dotenv()
 
 URI      = os.getenv("NEO4J_ADM_CONNECTION_STR")
-AUTH     = (os.getenv("NEO4J_USERNAME"), os.getenv("NEO4J_PASSWORD"))
+NEO4J_AUTH     = os.getenv("NEO4J_AUTH")
 DATABASE = os.getenv("NEO4J_ADMIN_DATABASE", "neo4j")
 
 @app.get("/clear-db")
@@ -122,7 +122,7 @@ async def add_new_health_check_data(health_check_data: HealthContext) -> None:
         try:
             logger.info(f'received POST request to the {method_name} route')
 
-            async with AsyncGraphDatabase.driver(URI, auth=AUTH) as driver:
+            async with AsyncGraphDatabase.driver(URI, auth=NEO4J_AUTH) as driver:
 
                 # Verify the driver can reach the server before doing any work.
                 await driver.verify_connectivity()
