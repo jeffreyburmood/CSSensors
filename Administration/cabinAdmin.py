@@ -2,10 +2,13 @@
     CSSensors system """
 import asyncio
 import functools
+import os
 
 from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
 from nats.extra import request_many
 
+from dotenv import load_dotenv
+from httpx import AsyncClient, HTTPStatusError
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
 from SensorDataMgmt.adminDataModel import HealthContext
@@ -24,7 +27,37 @@ termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
 scheduler = AsyncIOScheduler(logger=logger)
 
-async def health_check():
+load_dotenv()
+
+async def add_healthcheck_data_to_database(new_healthcheck_data: HealthContext, health: HealthContext) -> None:
+    """ the coroutine makes the actual fastapi call to add the new basement data to the db"""
+    method_name = add_healthcheck_data_to_database.__name__
+
+    try:
+        db_url = os.getenv('NEO4J_DATA_API_URL')
+
+        async with AsyncClient() as client:
+            response = await client.post(db_url+'/add-new-basement-data', json=new_basement_data.model_dump())
+            response.raise_for_status()
+            logger.info(f'request to add new basement data completed successfully!')
+
+    except HTTPStatusError as http_error:
+        logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"HTTP Exception encountered from data server: looks like {http_error}"
+        )
+
+    except Exception as ex:
+        logger.error(f'Exception encountered in {method_name}, looks like {ex}')
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketContextManagerError",
+            message=f"Exception encountered while adding basement data to database: looks like {ex}"
+        )
+
+async def health_check(health: HealthContext):
     method_name = health_check.__name__
 
     try:
@@ -34,10 +67,15 @@ async def health_check():
         health_responses = await request_many(nats_client, 'rst.sys.sys.healthcheck', b'go')
         # health_responses = await nc.request_many("rst.sys.sys.healthcheck", "perform health check")
 
+        logger.info(f'received {health_responses.messages_received} message responses to health check request')
+
         received = [message.data async for message in health_responses]
 
         for response in received:
             health_data = eval(response.decode())
+
+            await add_healthcheck_data_to_database(health_data, health)
+
             if health_data["error_count"] == 0:
                 logger.info(f"Health check response - no errors")
             else:
@@ -55,7 +93,9 @@ async def perform_scheduled_tasks(health):
     # )
     # data_store = SQLAlchemyDataStore(engine)
 
-    scheduler.add_job(health_check, 'interval', seconds=300, id='healthcheck')
+    bound_health_check_method = functools.partial(health_check, health=health)
+
+    scheduler.add_job(bound_health_check_method, 'interval', seconds=300, id='healthcheck')
 
     try:
         while not termination_event.is_set():
