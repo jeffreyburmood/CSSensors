@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from httpx import AsyncClient, HTTPStatusError
 from Nats.natsClientManager import NATSClientManager
 from utilities.handleCoreMessages import CoreMessages
-from SensorDataMgmt.adminDataModel import HealthContext
+from SensorDataMgmt.adminDataModel import HealthContext, HealthColor
 from utilities.logger import logger
 
 # Currently using version 3.11.x for aspscheduler, the 4.x versions (master in github) are PRE-RELEASE!
@@ -34,12 +34,12 @@ async def add_healthcheck_data_to_database(new_healthcheck_data: HealthContext, 
     method_name = add_healthcheck_data_to_database.__name__
 
     try:
-        db_url = os.getenv('NEO4J_DATA_API_URL')
+        db_url = os.getenv('NEO4J_ADMIN_API_URL')
 
         async with AsyncClient() as client:
-            response = await client.post(db_url+'/add-new-basement-data', json=new_basement_data.model_dump())
+            response = await client.post(db_url+'/add-new-health-check-data', json=new_healthcheck_data.model_dump())
             response.raise_for_status()
-            logger.info(f'request to add new basement data completed successfully!')
+            logger.info(f'request to add new health check data completed successfully!')
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
