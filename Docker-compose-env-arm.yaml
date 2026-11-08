@@ -27,7 +27,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - NEO4J_ENV_CONNECTION_STR=bolt://neo4j-db:7687
+      - NEO4J_ENV_CONNECTION_STR=bolt://neo4j-db:7688
       - LOG_LEVEL=INFO
     networks:
       - cabin-network

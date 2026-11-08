@@ -37,8 +37,8 @@ class HealthEvent:
     subsystem: str
 
 class HealthData(BaseModel):
-    component: str
-    subsystem: str
+    component: str = ""
+    subsystem: str = ""
     color: HealthColor = HealthColor.GREEN
     events: list[HealthEvent] = field(default_factory=list)
 

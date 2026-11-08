@@ -12,7 +12,7 @@ services:
     image: cabindock/admin:latest-arm
     container_name: admin
     environment:
-      - NEO4J_ADMIN_API_URL=http://neo4j-adm-dataserver:8000
+      - NEO4J_ADMIN_API_URL=http://neo4j-adm-dataserver:8001
       - LOG_LEVEL=INFO
     networks:
       - cabin-network
@@ -22,12 +22,12 @@ services:
 
   neo4j-adm-dataserver:
     # image: cabindock/neo4j-adm-dataserver:latest-amd
-    image: cabindock/neo4j-adm-dataserver:latest-arm
-    container_name: neo4j-adm-dataserver
+    image: cabindock/neo4j-admin-dataserver:latest-arm
+    container_name: neo4j-admin-dataserver
     ports:
-      - "8000:8000"
+      - "8001:8001"  # port used for FastAPI server
     environment:
-      - NEO4J_ADM_CONNECTION_STR=bolt://neo4j-adm-db:7687
+      - NEO4J_ADM_CONNECTION_STR=bolt://neo4j-adm-db:7689  # port used by dataserver to connect ot DB
       - LOG_LEVEL=INFO
     networks:
       - cabin-network
