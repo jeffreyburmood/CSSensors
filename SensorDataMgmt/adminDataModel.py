@@ -69,7 +69,7 @@ class HealthContext(BaseModel):
             "events": [
                 {
                     "timestamp": e.timestamp,
-                    "severity": e.color.value,
+                    "color": e.color.value,
                     "error_type": e.error_type,
                     "message": e.message,
                 }

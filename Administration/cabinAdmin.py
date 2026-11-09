@@ -69,19 +69,20 @@ async def health_check(health: HealthContext):
         health_responses = await request_many(nats_client, 'rst.sys.sys.healthcheck', b'go')
         # health_responses = await nc.request_many("rst.sys.sys.healthcheck", "perform health check")
 
-        logger.info(f'received {health_responses.messages_received} message responses to health check request')
-
         received = [message.data async for message in health_responses]
 
         for response in received:
-            health_data = eval(response.decode())
+            data = eval(response.decode())
+            logger.debug(f'health check data received, type is {type(data)}, response looks like {data}')
+
+            health_data = HealthContext(**data)  # convert health check data response to a HealthContext instance
 
             await add_healthcheck_data_to_database(health_data, health)
 
-            if health_data["error_count"] == 0:
+            if data["error_count"] == 0:
                 logger.info(f"Health check response - no errors")
             else:
-                logger.warning(f"Health check response with errors = {health_data}")
+                logger.warning(f"Health check response with errors = {data}")
 
     except Exception as ex:
         logger.error(f"Exception encountered in {method_name} while performing periodic health checks, looks like {ex}")
