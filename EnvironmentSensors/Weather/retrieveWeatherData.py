@@ -1,5 +1,8 @@
 import asyncio
 import functools
+from datetime import datetime
+
+import pytz
 
 from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
 from Nats.natsClientManager import NATSClientManager
@@ -189,7 +192,13 @@ async def main() -> None:
 
     try:
 
-        health = HealthContext(subsystem="environment", component="weather")
+        # set up the HealthContext object with the specific information to this component
+        data = {
+            "subsystem": "environment",
+            "component": "weather",
+            "last_reset": datetime.now(tz=pytz.timezone('America/Denver')).isoformat()
+        }
+        health = HealthContext(**data)
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(process_websocket(health))

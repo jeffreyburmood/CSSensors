@@ -14,7 +14,6 @@ Slightly more upfront design effort
 """
 import json
 from datetime import datetime
-from datetime import timezone
 from enum import Enum
 
 import pytz
@@ -32,27 +31,12 @@ class HealthEvent(BaseModel):
     error_type: str
     message: str
 
-    def __init__(self, timestamp, color, error_type, message):
-        super().__init__()
-        self.timestamp = timestamp
-        self.color = color
-        self.error_type = error_type
-        self.message = message
-
-class HealthData(BaseModel):
-    component: str = ""  # not sure why this initialization is needed but Pydantic wants it
-    subsystem: str = ""  # not sure why this initialization is needed but Pydantic wants it
+class HealthContext(BaseModel):
+    component: str
+    subsystem: str
     color: HealthColor = HealthColor.GREEN
     events: list[HealthEvent] = []
-
-
-class HealthContext(HealthData):
-    last_reset: str = ""  # not sure why this initialization is needed but Pydantic wants it
-
-    def __init__(self, subsystem, component):
-        super().__init__()
-        self.subsystem = subsystem
-        self.component = component
+    last_reset: str
 
     def report_error(
         self,
@@ -65,14 +49,14 @@ class HealthContext(HealthData):
         ):
             self.color = color
 
-        self.events.append(
-            HealthEvent(
-                timestamp=datetime.now(tz=pytz.timezone('America/Denver')).isoformat(),
-                color=color,
-                error_type=error_type,
-                message=message,
-            )
-        )
+        data = {
+            "timestamp": datetime.now(tz=pytz.timezone('America/Denver')).isoformat(),
+            "color": color,
+            "error_type": error_type,
+            "message": message
+        }
+        new_event = HealthEvent(**data)
+        self.events.append(new_event)
 
     def publish_and_reset(self) -> bytearray:
         payload = {
@@ -80,7 +64,7 @@ class HealthContext(HealthData):
             "component": self.component,
             "status": self.color.value,
             "last_reset": self.last_reset,
-            "reported_at": datetime.now(timezone.utc).isoformat(),
+            "reported_at": datetime.now(tz=pytz.timezone('America/Denver')).isoformat(),
             "error_count": len(self.events),
             "events": [
                 {
@@ -108,4 +92,4 @@ class HealthContext(HealthData):
     def _reset(self):
         self.color = HealthColor.GREEN
         self.events = []
-        self.last_reset = datetime.now(timezone.utc).isoformat()
+        self.last_reset = datetime.now(tz=pytz.timezone('America/Denver')).isoformat()

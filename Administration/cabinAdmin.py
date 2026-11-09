@@ -3,7 +3,9 @@
 import asyncio
 import functools
 import os
+from datetime import datetime
 
+import pytz
 from apscheduler.schedulers.base import STATE_RUNNING, STATE_PAUSED
 from nats.extra import request_many
 
@@ -178,7 +180,13 @@ async def main() -> None:
 
     try:
 
-        health = HealthContext("admin", "healthcheck")
+        # set up the HealthContext object with the specific information to this component
+        data = {
+            "subsystem": "admin",
+            "component": "healthcheck",
+            "last_reset": datetime.now(tz=pytz.timezone('America/Denver')).isoformat()
+        }
+        health = HealthContext(**data)
 
         async with asyncio.TaskGroup() as tg:
             tg.create_task(perform_scheduled_tasks(health))
