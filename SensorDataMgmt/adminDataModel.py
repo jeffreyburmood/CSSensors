@@ -13,7 +13,6 @@ Requires passing the context object through the call chain, which can feel verbo
 Slightly more upfront design effort
 """
 import json
-from dataclasses import dataclass, field
 from datetime import datetime
 from datetime import timezone
 from enum import Enum
@@ -27,27 +26,28 @@ class HealthColor(str, Enum):
     YELLOW = "yellow"
     RED = "red"
 
-@dataclass
-class HealthEvent:
+class HealthEvent(BaseModel):
     timestamp: str
     color: HealthColor
     error_type: str
     message: str
-    component: str
-    subsystem: str
+
+    def __init__(self, timestamp, color, error_type, message):
+        super().__init__()
+        self.timestamp = timestamp
+        self.color = color
+        self.error_type = error_type
+        self.message = message
 
 class HealthData(BaseModel):
-    component: str = ""
-    subsystem: str = ""
+    component: str = ""  # not sure why this initialization is needed but Pydantic wants it
+    subsystem: str = ""  # not sure why this initialization is needed but Pydantic wants it
     color: HealthColor = HealthColor.GREEN
-    events: list[HealthEvent] = field(default_factory=list)
+    events: list[HealthEvent] = []
 
 
-@dataclass
 class HealthContext(HealthData):
-    last_reset: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    last_reset: str = ""  # not sure why this initialization is needed but Pydantic wants it
 
     def __init__(self, subsystem, component):
         super().__init__()
@@ -71,8 +71,6 @@ class HealthContext(HealthData):
                 color=color,
                 error_type=error_type,
                 message=message,
-                component=self.component,
-                subsystem=self.subsystem,
             )
         )
 
@@ -90,8 +88,6 @@ class HealthContext(HealthData):
                     "severity": e.color.value,
                     "error_type": e.error_type,
                     "message": e.message,
-                    "component": e.component,
-                    "subsystem": e.subsystem,
                 }
                 for e in self.events  # looks like this creates a list for the payload dict
             ],
