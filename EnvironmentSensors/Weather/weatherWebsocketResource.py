@@ -15,6 +15,11 @@ from SensorDataMgmt.environmentDataModel import WeatherData, InteriorData, Basem
 from SensorDataMgmt.adminDataModel import HealthContext, HealthColor
 from utilities.logger import logger
 
+# Currently using version 3.11.x for aspscheduler, the 4.x versions (master in github) are PRE-RELEASE!
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+scheduler = AsyncIOScheduler(logger=logger)
+
 # persistent state for accumulating temperature data
 _weather_accumulator = defaultdict(list)
 _interior_accumulator = defaultdict(list)
