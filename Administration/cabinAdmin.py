@@ -115,6 +115,9 @@ async def perform_scheduled_tasks(health):
 
             await asyncio.sleep(5)  # handling the data events via the websocket performed in the resource object
 
+        logger.info(f'a termination event occurred, scheduler is being shutdown')
+        scheduler.shutdown()
+
     finally:
         await asyncio.sleep(1)
 

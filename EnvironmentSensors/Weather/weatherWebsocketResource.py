@@ -16,9 +16,9 @@ from SensorDataMgmt.adminDataModel import HealthContext, HealthColor
 from utilities.logger import logger
 
 # Currently using version 3.11.x for aspscheduler, the 4.x versions (master in github) are PRE-RELEASE!
-# from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-# scheduler = AsyncIOScheduler(logger=logger)
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+# scheduler for data check
+scheduler = AsyncIOScheduler(logger=logger)
 
 # persistent state for accumulating temperature data
 _weather_accumulator = defaultdict(list)
@@ -27,6 +27,8 @@ _basement_accumulator = defaultdict(list)
 _last_processed_hour = None
 _last_interior_processed_hour = None
 _last_basement_processed_hour = None
+# persistent state for scheduler data check
+_data_received = False
 
 load_dotenv()
 
@@ -463,10 +465,15 @@ def validate_data(data, health: HealthContext):
 async def data_coroutine(data, health: HealthContext):
     """ process the data received by adding it to the database """
 
+    global _data_received
+
     method_name = data_coroutine.__name__
 
     try:
         logger.debug(f"Data received async: {data}")
+        # first thing set the data_received flag since we got a data packet
+        _data_received = True
+
         if validate_data(data, health):
             await process_weather_data(data, health)
             await process_interior_data(data, health)
@@ -540,6 +547,32 @@ def configure_websocket(health: HealthContext) -> Websocket:
             message=f"Exception encountered while configuring websocket: looks like {ex}"
         )
 
+async def perform_data_check(health: HealthContext):
+
+    global _data_received
+
+    if not _data_received:
+        health.report_error(
+            color=HealthColor.YELLOW,
+            error_type="WebSocketDataCheckError",
+            message=f"No data has been received from the web socket within the last hour"
+        )
+    else:
+        _data_received = False
+
+async def start_data_check_scheduler(health: HealthContext):
+    bound_data_check_method = functools.partial(perform_data_check, health=health)
+
+    logger.info('starting data check scheduler')
+    scheduler.add_job(bound_data_check_method, 'interval', seconds=3600, id='datacheck')
+
+    scheduler.start()
+
+async def stop_data_check_scheduler():
+    logger.info('shutting down data check scheduler')
+    scheduler.shutdown()
+
+
 class AsyncManagedWebsocketResource:
     """ this class defines a websocket resource to be managed within an async Context Manager """
     def __init__(self, name, health: HealthContext):
@@ -605,6 +638,7 @@ class AsyncManagedWebsocketResource:
             self.logger.debug(f"[{self.name}] acquiring (async)...")
             websocket = configure_websocket(self.health)
             await websocket.connect()
+            await start_data_check_scheduler(self.health)
             return websocket
 
         except Exception as ex:
@@ -623,6 +657,7 @@ class AsyncManagedWebsocketResource:
             # simulate async release work
             self.logger.debug(f"[{self.name}] releasing (async)...")
             await self.resource.disconnect()
+            await stop_data_check_scheduler()
             return None
 
         except Exception as ex:
