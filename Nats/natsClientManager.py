@@ -169,7 +169,7 @@ class NATSClientManager:
         try:
             await self._nc.publish(subject, message, headers=headers)
             await self._nc.flush()
-            logger.info(f"Published message to subject '{subject}'")
+            logger.debug(f"Published message to subject '{subject}'")
         except Exception as e:
             logger.error(f"Failed to publish message to subject '{subject}': {e}")
             raise
