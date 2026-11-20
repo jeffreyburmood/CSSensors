@@ -13,6 +13,7 @@ services:
     container_name: admin
     environment:
       - NEO4J_ADMIN_API_URL=http://neo4j-adm-dataserver:8001
+      - NATS_SERVER_4_URL=nats://nats-server-4:4222
       - LOG_LEVEL=INFO
     networks:
       - cabin-network

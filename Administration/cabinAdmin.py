@@ -41,7 +41,7 @@ async def add_healthcheck_data_to_database(new_healthcheck_data: HealthContext, 
         async with AsyncClient() as client:
             response = await client.post(db_url+'/add-new-health-check-data', json=new_healthcheck_data.model_dump())
             response.raise_for_status()
-            logger.info(f'request to add new health check data completed successfully!')
+            logger.debug(f'request to add new health check data completed successfully!')
 
     except HTTPStatusError as http_error:
         logger.error(f'Http error status returned for {method_name}, looks like {http_error}')
@@ -65,7 +65,12 @@ async def health_check(health: HealthContext):
     try:
         logger.info("Performing another health check")
 
-        nats_client = await connect('nats://nats-server-4:4222')
+        # for some reason the NATSClientManager class does not work for the request_many() method call so we have to
+        # direct nats client connect call.
+
+        # nats_client = await connect('nats://nats-server-4:4222')
+        nats_url = os.getenv('NATS_SERVER_4_URL')
+        nats_client = await connect(nats_url)
         health_responses = await request_many(nats_client, 'rst.sys.sys.healthcheck', b'go')
         # health_responses = await nc.request_many("rst.sys.sys.healthcheck", "perform health check")
 
@@ -80,7 +85,7 @@ async def health_check(health: HealthContext):
             await add_healthcheck_data_to_database(health_data, health)
 
             if data["error_count"] == 0:
-                logger.info(f"Health check response - no errors")
+                logger.debug(f"Health check response - no errors")
             else:
                 logger.warning(f"Health check response with errors = {data}")
 

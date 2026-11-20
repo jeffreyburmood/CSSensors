@@ -1,8 +1,10 @@
 import asyncio
 import functools
+import os
 from datetime import datetime
 
 import pytz
+from dotenv import load_dotenv
 
 from EnvironmentSensors.Weather.weatherWebsocketResource import AsyncManagedWebsocketResource
 from Nats.natsClientManager import NATSClientManager
@@ -14,6 +16,8 @@ start_event = asyncio.Event()
 stop_event = asyncio.Event()
 termination_event = asyncio.Event()
 nats_shutdown_event = asyncio.Event()
+
+load_dotenv()
 
 nc = NATSClientManager()
 
@@ -127,7 +131,10 @@ async def process_messages(health: HealthContext):
     try:
 
         # set up nats servers and connect to the nats cluster
-        servers = ['nats://nats-server-1:4222', 'nats://nats-server-2:4222']
+        # servers = ['nats://nats-server-1:4222', 'nats://nats-server-2:4222']
+        nats_1_url = os.getenv('NATS_SERVER_1_URL')
+        nats_2_url = os.getenv('NATS_SERVER_2_URL')
+        servers = [nats_1_url, nats_2_url]
 
         # set up core messages
         coreMessages = CoreMessages(start_event, stop_event, nats_shutdown_event)
