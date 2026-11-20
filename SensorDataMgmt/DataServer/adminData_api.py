@@ -120,13 +120,13 @@ async def add_new_health_check_data(health_check_data: HealthContext) -> None:
         method_name = add_new_health_check_data.__name__
 
         try:
-            logger.info(f'received POST request to the {method_name} route')
+            logger.debug(f'received POST request to the {method_name} route')
 
             async with AsyncGraphDatabase.driver(URI, auth=NEO4J_AUTH) as driver:
 
                 # Verify the driver can reach the server before doing any work.
                 await driver.verify_connectivity()
-                logger.info(f"[DRIVER] Connected to Neo4j at {URI}\n")
+                logger.debug(f"[DRIVER] Connected to Neo4j at {URI}\n")
 
                 async with get_session(driver) as session:
                 # Each session.run() call is its own auto-commit transaction.
